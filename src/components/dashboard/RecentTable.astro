@@ -1,0 +1,219 @@
+---
+import { TrendingUp, TrendingDown } from 'lucide-react';
+import type { DataWithDelta } from "@/utils/dataProcessor";
+
+interface Props {
+    lastRecord: DataWithDelta;
+    previousRecord?: any;
+}
+
+const { lastRecord, previousRecord } = Astro.props;
+
+// Métricas simples (un solo valor)
+const simpleMetrics = [
+    { id: 'Peso', label: 'Peso', value: lastRecord.Peso, prev: previousRecord?.Peso, delta: lastRecord.delta?.Peso, unit: 'kg', inverse: true },
+    { id: 'IMC', label: 'IMC', value: lastRecord.IMC, prev: previousRecord?.IMC, delta: lastRecord.delta?.IMC, unit: '', inverse: true },
+];
+
+// Métricas combinadas (kg | %)
+const combinedMetrics = [
+    { 
+        id: 'Grasa', 
+        label: 'Grasa Corporal',
+        valueKg: lastRecord.GrasaKg, 
+        valuePorc: lastRecord.GrasaPorc,
+        prevKg: previousRecord?.GrasaKg, 
+        prevPorc: previousRecord?.GrasaPorc,
+        deltaKg: lastRecord.delta?.GrasaKg,
+        deltaPorc: lastRecord.delta?.GrasaPorc,
+        inverse: true 
+    },
+    { 
+        id: 'Agua', 
+        label: 'Agua Corporal',
+        valueKg: lastRecord.AguaKg, 
+        valuePorc: lastRecord.AguaPorc,
+        prevKg: previousRecord?.AguaKg, 
+        prevPorc: previousRecord?.AguaPorc,
+        deltaKg: lastRecord.delta?.AguaKg,
+        deltaPorc: lastRecord.delta?.AguaPorc,
+        inverse: false 
+    },
+];
+
+// Resto de métricas simples
+const otherMetrics = [
+    { id: 'MasaLibreKg', label: 'Masa Libre de Grasa', value: lastRecord.MasaLibreKg, prev: previousRecord?.MasaLibreKg, delta: lastRecord.delta?.MasaLibreKg, unit: 'kg', inverse: false },
+    { id: 'MusculoKg', label: 'Masa Muscular', value: lastRecord.MusculoKg, prev: previousRecord?.MusculoKg, delta: lastRecord.delta?.MusculoKg, unit: 'kg', inverse: false },
+    { id: 'MetabolismoBasal', label: 'Metabolismo Basal', value: lastRecord.MetabolismoBasal, prev: previousRecord?.MetabolismoBasal, delta: lastRecord.delta?.MetabolismoBasal, unit: 'kcal', inverse: false },
+    { id: 'EdadMetabolica', label: 'Edad Metabólica', value: lastRecord.EdadMetabolica, prev: previousRecord?.EdadMetabolica, delta: lastRecord.delta?.EdadMetabolica, unit: 'años', inverse: true },
+    { id: 'GrasaVisceral', label: 'Grasa Visceral', value: lastRecord.GrasaVisceral, prev: previousRecord?.GrasaVisceral, delta: lastRecord.delta?.GrasaVisceral, unit: '', inverse: true },
+];
+
+const allSimpleMetrics = [...simpleMetrics, ...otherMetrics];
+const totalRows = simpleMetrics.length + combinedMetrics.length + otherMetrics.length;
+
+function getTrendColor(delta: number | string | undefined, inverse: boolean) {
+    if (!delta || delta == 0) return 'text-gray-500';
+    const val = Number(delta);
+    const isGood = inverse ? val < 0 : val > 0;
+    return isGood ? 'text-emerald-400' : 'text-red-400';
+}
+
+function getTrendIcon(delta: number | string | undefined) {
+    if (!delta || delta == 0) return null;
+    const val = Number(delta);
+    return val > 0 ? TrendingUp : TrendingDown;
+}
+---
+
+{/* Mobile Card View */}
+<div class="block sm:hidden space-y-3">
+    {/* Métricas simples iniciales */}
+    {simpleMetrics.map((metric) => {
+        const trendColor = getTrendColor(metric.delta, metric.inverse);
+        const TrendIcon = getTrendIcon(metric.delta);
+        
+        return (
+        <div class="rounded-xl bg-[#111c16] border border-[#1e3327] p-4">
+            <div class="flex justify-between items-start mb-2">
+                <span class="text-xs text-gray-500 font-medium">{metric.label}</span>
+                <span class={`text-xs font-medium ${trendColor} flex items-center`}>
+                    {metric.delta && Number(metric.delta) > 0 ? '+' : ''}{metric.delta}{metric.unit && metric.unit !== '%' ? ' ' + metric.unit : metric.unit}
+                    {TrendIcon && <TrendIcon className="h-3 w-3 ml-1" />}
+                </span>
+            </div>
+            <div class="flex justify-between items-baseline">
+                <span class="text-lg font-bold text-white">{metric.value} {metric.unit}</span>
+                <span class="text-sm text-gray-500">{metric.prev ?? '-'} {metric.unit}</span>
+            </div>
+        </div>
+    )})}
+    
+    {/* Métricas combinadas */}
+    {combinedMetrics.map((metric) => {
+        const trendColorKg = getTrendColor(metric.deltaKg, metric.inverse);
+        const trendColorPorc = getTrendColor(metric.deltaPorc, metric.inverse);
+        
+        return (
+        <div class="rounded-xl bg-[#111c16] border border-[#1e3327] p-4">
+            <div class="flex justify-between items-start mb-2">
+                <span class="text-xs text-gray-500 font-medium">{metric.label}</span>
+                <span class="text-xs font-medium text-gray-400 flex items-center gap-1">
+                    <span class={trendColorKg}>{metric.deltaKg && Number(metric.deltaKg) > 0 ? '+' : ''}{metric.deltaKg} kg</span>
+                    <span class="text-gray-600">|</span>
+                    <span class={trendColorPorc}>{metric.deltaPorc && Number(metric.deltaPorc) > 0 ? '+' : ''}{metric.deltaPorc}%</span>
+                </span>
+            </div>
+            <div class="flex justify-between items-baseline">
+                <span class="text-lg font-bold text-white">{metric.valueKg} kg <span class="text-gray-500">|</span> {metric.valuePorc}%</span>
+                <span class="text-sm text-gray-500">{metric.prevKg ?? '-'} kg | {metric.prevPorc ?? '-'}%</span>
+            </div>
+        </div>
+    )})}
+    
+    {/* Resto de métricas simples */}
+    {otherMetrics.map((metric) => {
+        const trendColor = getTrendColor(metric.delta, metric.inverse);
+        const TrendIcon = getTrendIcon(metric.delta);
+        
+        return (
+        <div class="rounded-xl bg-[#111c16] border border-[#1e3327] p-4">
+            <div class="flex justify-between items-start mb-2">
+                <span class="text-xs text-gray-500 font-medium">{metric.label}</span>
+                <span class={`text-xs font-medium ${trendColor} flex items-center`}>
+                    {metric.delta && Number(metric.delta) > 0 ? '+' : ''}{metric.delta}{metric.unit && metric.unit !== '%' ? ' ' + metric.unit : metric.unit}
+                    {TrendIcon && <TrendIcon className="h-3 w-3 ml-1" />}
+                </span>
+            </div>
+            <div class="flex justify-between items-baseline">
+                <span class="text-lg font-bold text-white">{metric.value} {metric.unit}</span>
+                <span class="text-sm text-gray-500">{metric.prev ?? '-'} {metric.unit}</span>
+            </div>
+        </div>
+    )})}
+</div>
+
+{/* Desktop Table View */}
+<div class="hidden sm:block rounded-xl bg-[#111c16] border border-[#1e3327] overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full min-w-[500px]">
+            <thead>
+                <tr class="border-b border-[#1e3327]">
+                    <th class="text-left px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Métrica</th>
+                    <th class="text-left px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Último Valor</th>
+                    <th class="text-left px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Valor Anterior</th>
+                    <th class="text-right px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Cambio</th>
+                </tr>
+            </thead>
+            <tbody>
+                {/* Métricas simples iniciales */}
+                {simpleMetrics.map((metric) => {
+                    const trendColor = getTrendColor(metric.delta, metric.inverse);
+                    const TrendIcon = getTrendIcon(metric.delta);
+                    
+                    return (
+                    <tr class="hover:bg-[#162119] transition-colors border-b border-[#1e3327]">
+                        <td class="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm font-medium text-white">{metric.label}</td>
+                        <td class="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm text-white">{metric.value} {metric.unit}</td>
+                        <td class="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm text-gray-500">{metric.prev ?? '-'} {metric.unit}</td>
+                        <td class={`px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm font-medium text-right ${trendColor}`}>
+                            <div class="flex items-center justify-end gap-1 lg:gap-1.5">
+                                <span>{metric.delta && Number(metric.delta) > 0 ? '+' : ''}{metric.delta}{metric.unit && metric.unit !== '%' ? ' ' + metric.unit : metric.unit}</span>
+                                {TrendIcon && <TrendIcon className="h-3 w-3 lg:h-4 lg:w-4" />}
+                            </div>
+                        </td>
+                    </tr>
+                )})}
+                
+                {/* Métricas combinadas */}
+                {combinedMetrics.map((metric) => {
+                    const trendColorKg = getTrendColor(metric.deltaKg, metric.inverse);
+                    const trendColorPorc = getTrendColor(metric.deltaPorc, metric.inverse);
+                    const TrendIconKg = getTrendIcon(metric.deltaKg);
+                    const TrendIconPorc = getTrendIcon(metric.deltaPorc);
+                    
+                    return (
+                    <tr class="hover:bg-[#162119] transition-colors border-b border-[#1e3327]">
+                        <td class="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm font-medium text-white">{metric.label}</td>
+                        <td class="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm text-white">
+                            {metric.valueKg} kg <span class="text-gray-500 mx-1">|</span> {metric.valuePorc}%
+                        </td>
+                        <td class="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm text-gray-500">
+                            {metric.prevKg ?? '-'} kg <span class="mx-1">|</span> {metric.prevPorc ?? '-'}%
+                        </td>
+                        <td class="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm font-medium text-right">
+                            <div class="flex items-center justify-end gap-1 lg:gap-1.5">
+                                <span class={trendColorKg}>{metric.deltaKg && Number(metric.deltaKg) > 0 ? '+' : ''}{metric.deltaKg} kg</span>
+                                {TrendIconKg && <TrendIconKg className={`h-3 w-3 lg:h-4 lg:w-4 ${trendColorKg}`} />}
+                                <span class="text-gray-600 mx-0.5">|</span>
+                                <span class={trendColorPorc}>{metric.deltaPorc && Number(metric.deltaPorc) > 0 ? '+' : ''}{metric.deltaPorc}%</span>
+                                {TrendIconPorc && <TrendIconPorc className={`h-3 w-3 lg:h-4 lg:w-4 ${trendColorPorc}`} />}
+                            </div>
+                        </td>
+                    </tr>
+                )})}
+                
+                {/* Resto de métricas simples */}
+                {otherMetrics.map((metric, index) => {
+                    const trendColor = getTrendColor(metric.delta, metric.inverse);
+                    const TrendIcon = getTrendIcon(metric.delta);
+                    const isLast = index === otherMetrics.length - 1;
+                    
+                    return (
+                    <tr class={`hover:bg-[#162119] transition-colors ${!isLast ? 'border-b border-[#1e3327]' : ''}`}>
+                        <td class="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm font-medium text-white">{metric.label}</td>
+                        <td class="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm text-white">{metric.value} {metric.unit}</td>
+                        <td class="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm text-gray-500">{metric.prev ?? '-'} {metric.unit}</td>
+                        <td class={`px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm font-medium text-right ${trendColor}`}>
+                            <div class="flex items-center justify-end gap-1 lg:gap-1.5">
+                                <span>{metric.delta && Number(metric.delta) > 0 ? '+' : ''}{metric.delta}{metric.unit && metric.unit !== '%' ? ' ' + metric.unit : metric.unit}</span>
+                                {TrendIcon && <TrendIcon className="h-3 w-3 lg:h-4 lg:w-4" />}
+                            </div>
+                        </td>
+                    </tr>
+                )})}
+            </tbody>
+        </table>
+    </div>
+</div>
