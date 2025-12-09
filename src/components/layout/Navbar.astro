@@ -1,0 +1,74 @@
+---
+import { User, Activity, Menu, X } from 'lucide-react';
+
+const navItems = [
+  { label: 'Dashboard', href: '/' },
+  { label: 'Historial', href: '/history' },
+  { label: 'Perfil', href: '#' },
+];
+
+const currentPath = Astro.url.pathname;
+---
+
+<nav class="sticky top-0 z-50 border-b border-[#1e3327] bg-[#0d1a12]">
+  <div class="flex h-14 items-center justify-between px-4 lg:px-8">
+    {/* Logo - Always visible */}
+    <div class="flex items-center gap-2">
+        <div class="bg-emerald-500/20 p-1.5 rounded-full">
+            <Activity className="h-4 w-4 text-emerald-400" />
+        </div>
+        <span class="font-semibold text-sm sm:text-base tracking-tight text-white">NutriTrack</span>
+    </div>
+
+    {/* Navigation Links - Hidden on mobile */}
+    <div class="hidden md:flex items-center gap-6">
+      {navItems.map((item) => (
+        <a 
+          href={item.href} 
+          class={`text-sm font-medium transition-colors hover:text-emerald-400 ${currentPath === item.href ? 'text-emerald-400' : 'text-gray-400'}`}
+        >
+          {item.label}
+        </a>
+      ))}
+    </div>
+
+    {/* Right Section */}
+    <div class="flex items-center gap-2 sm:gap-3">
+        {/* Toggle Switch - Hidden on very small screens */}
+        <div class="hidden sm:block h-5 w-9 bg-[#1e3327] rounded-full relative cursor-pointer">
+            <div class="absolute right-0.5 top-0.5 h-4 w-4 bg-emerald-400 rounded-full shadow-sm"></div>
+        </div>
+        {/* Avatar */}
+        <div class="h-8 w-8 rounded-full bg-emerald-500 flex items-center justify-center">
+            <User className="h-4 w-4 text-black" />
+        </div>
+        {/* Mobile Menu Button */}
+        <button id="mobile-menu-btn" class="md:hidden p-2 text-gray-400 hover:text-white transition-colors">
+            <Menu className="h-5 w-5" id="menu-icon" />
+        </button>
+    </div>
+  </div>
+  
+  {/* Mobile Menu - Hidden by default */}
+  <div id="mobile-menu" class="hidden md:hidden border-t border-[#1e3327] bg-[#111c16]">
+    <div class="px-4 py-3 space-y-1">
+      {navItems.map((item) => (
+        <a 
+          href={item.href} 
+          class={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentPath === item.href ? 'bg-[#1e3327] text-emerald-400' : 'text-gray-400 hover:bg-[#162119] hover:text-white'}`}
+        >
+          {item.label}
+        </a>
+      ))}
+    </div>
+  </div>
+</nav>
+
+<script>
+  const menuBtn = document.getElementById('mobile-menu-btn');
+  const mobileMenu = document.getElementById('mobile-menu');
+  
+  menuBtn?.addEventListener('click', () => {
+    mobileMenu?.classList.toggle('hidden');
+  });
+</script>

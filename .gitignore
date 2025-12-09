@@ -22,3 +22,17 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# vscode setting folder
+.vscode/
+
+# Docs
+docs/
+.docs/*
+
+# Cursor
+.cursor/*
+
+# Data files
+src/data/*
+!src/data/.gitkeep
