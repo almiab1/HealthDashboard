@@ -1,11 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { RegistroCorporal } from '../../utils/data';
 import { RegisterForm } from '../register/RegisterForm';
-import { Trash2, Edit, X, AlertTriangle } from 'lucide-react';
+import { Trash2, Edit, X, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, Calendar, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface HistoryTableProps {
   initialData: RegistroCorporal[];
+}
+
+type SortDirection = 'asc' | 'desc';
+
+interface SortConfig {
+  key: keyof RegistroCorporal | null;
+  direction: SortDirection;
 }
 
 export const HistoryTable: React.FC<HistoryTableProps> = ({ initialData }) => {
@@ -14,12 +21,65 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({ initialData }) => {
     initialData.map(d => ({
       ...d,
       Fecha: new Date(d.Fecha)
-    })).sort((a, b) => b.Fecha.getTime() - a.Fecha.getTime())
+    }))
   );
   
   const [editingRecord, setEditingRecord] = useState<RegistroCorporal | null>(null);
   const [deleteConfirmationId, setDeleteConfirmationId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Sorting and Filtering State
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'Fecha', direction: 'desc' });
+  const [dateRange, setDateRange] = useState({
+    start: '',
+    end: ''
+  });
+
+  const handleSort = (key: keyof RegistroCorporal) => {
+    setSortConfig(current => ({
+      key,
+      direction: current.key === key && current.direction === 'desc' ? 'asc' : 'desc'
+    }));
+  };
+
+  const processedData = useMemo(() => {
+    let result = [...data];
+
+    // Filter by Date
+    if (dateRange.start) {
+      const startDate = new Date(dateRange.start);
+      // Ajustar zona horaria si fuera necesario, pero por simplicidad usaremos local
+      startDate.setHours(0, 0, 0, 0);
+      result = result.filter(r => r.Fecha >= startDate);
+    }
+    if (dateRange.end) {
+      const endDate = new Date(dateRange.end);
+      endDate.setHours(23, 59, 59, 999);
+      result = result.filter(r => r.Fecha <= endDate);
+    }
+
+    // Sort
+    if (sortConfig.key) {
+      result.sort((a, b) => {
+        const aValue = a[sortConfig.key!];
+        const bValue = b[sortConfig.key!];
+
+        if (aValue instanceof Date && bValue instanceof Date) {
+          return sortConfig.direction === 'asc' 
+            ? aValue.getTime() - bValue.getTime() 
+            : bValue.getTime() - aValue.getTime();
+        }
+
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+        }
+
+        return 0;
+      });
+    }
+
+    return result;
+  }, [data, sortConfig, dateRange]);
 
   const confirmDelete = async () => {
     if (deleteConfirmationId === null) return;
@@ -49,16 +109,88 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({ initialData }) => {
   };
 
   const handleEditSuccess = () => {
-    // Reload to get fresh data
     window.location.reload();
+  };
+
+  const SortableHeader = ({ label, sortKey, align = 'left' }: { label: string, sortKey: keyof RegistroCorporal, align?: 'left' | 'right' | 'center' }) => {
+    const isActive = sortConfig.key === sortKey;
+    return (
+      <th 
+        className={`px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500 cursor-pointer hover:text-white transition-colors text-${align} group select-none`}
+        onClick={() => handleSort(sortKey)}
+      >
+        <div className={`flex items-center gap-1 ${align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : 'justify-start'}`}>
+          {label}
+          <span className={`transition-opacity ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}`}>
+            {isActive && sortConfig.direction === 'asc' ? (
+              <ArrowUp className="h-3 w-3" />
+            ) : isActive && sortConfig.direction === 'desc' ? (
+              <ArrowDown className="h-3 w-3" />
+            ) : (
+              <ArrowUpDown className="h-3 w-3" />
+            )}
+          </span>
+        </div>
+      </th>
+    );
   };
 
   return (
     <>
+      {/* Filters */}
+      <div className="mb-6 bg-[#111c16] border border-[#1e3327] p-4 rounded-xl flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2 text-gray-400">
+          <Filter className="h-4 w-4" />
+          <span className="text-sm font-medium">Filtrar:</span>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-500 whitespace-nowrap">Desde</label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+              <input 
+                type="date" 
+                value={dateRange.start}
+                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                className="w-full sm:w-auto pl-10 pr-3 py-1.5 bg-[#162119] border border-[#1e3327] rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-500 whitespace-nowrap">Hasta</label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+              <input 
+                type="date" 
+                value={dateRange.end}
+                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                className="w-full sm:w-auto pl-10 pr-3 py-1.5 bg-[#162119] border border-[#1e3327] rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
+              />
+            </div>
+          </div>
+        </div>
+        
+        {(dateRange.start || dateRange.end) && (
+          <button 
+            onClick={() => setDateRange({ start: '', end: '' })}
+            className="p-1.5 text-gray-400 hover:text-white hover:bg-[#1e3327] rounded-lg transition-colors"
+            title="Limpiar filtros"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+
+        <div className="ml-auto text-xs text-gray-500">
+          Mostrando {processedData.length} registros
+        </div>
+      </div>
+
       {/* Mobile Card View */}
       <div className="block sm:hidden space-y-3">
         <h2 className="text-lg font-bold text-white mb-4">Histórico Completo</h2>
-        {data.map((record) => (
+        {processedData.map((record) => (
           <div key={record.id} className="rounded-xl bg-[#111c16] border border-[#1e3327] p-4">
             <div className="flex justify-between items-center mb-3 pb-3 border-b border-[#1e3327]">
               <span className="text-sm font-semibold text-white">
@@ -112,10 +244,11 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({ initialData }) => {
             </div>
           </div>
         ))}
-        {data.length === 0 && (
-          <p className="text-sm text-gray-500 text-center py-4">No hay registros disponibles.</p>
+        {processedData.length === 0 && (
+          <div className="text-center py-8 bg-[#111c16] border border-[#1e3327] rounded-xl">
+            <p className="text-sm text-gray-500">No hay registros que coincidan con los filtros.</p>
+          </div>
         )}
-        <p className="text-xs text-gray-500 text-center pt-2">Registro completo de mediciones corporales.</p>
       </div>
 
       {/* Desktop Table View */}
@@ -128,20 +261,20 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({ initialData }) => {
           <table className="w-full min-w-[700px]">
             <thead>
               <tr className="border-b border-[#1e3327]">
-                <th className="text-left px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Fecha</th>
-                <th className="text-left px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Peso</th>
-                <th className="text-left px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Músculo</th>
-                <th className="text-left px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Grasa</th>
-                <th className="text-left px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">% Grasa</th>
-                <th className="text-left px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">% Agua</th>
-                <th className="text-left px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Fase</th>
-                <th className="text-left px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">IMC</th>
+                <SortableHeader label="Fecha" sortKey="Fecha" />
+                <SortableHeader label="Peso" sortKey="Peso" />
+                <SortableHeader label="Músculo" sortKey="MusculoKg" />
+                <SortableHeader label="Grasa" sortKey="GrasaKg" />
+                <SortableHeader label="% Grasa" sortKey="GrasaPorc" />
+                <SortableHeader label="% Agua" sortKey="AguaPorc" />
+                <SortableHeader label="Fase" sortKey="AnguloFase" />
+                <SortableHeader label="IMC" sortKey="IMC" />
                 <th className="text-right px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {data.map((record, index) => {
-                const isLast = index === data.length - 1;
+              {processedData.map((record, index) => {
+                const isLast = index === processedData.length - 1;
                 return (
                   <tr key={record.id} className={`hover:bg-[#162119] transition-colors ${!isLast ? 'border-b border-[#1e3327]' : ''}`}>
                     <td className="px-4 lg:px-6 py-3 lg:py-4 text-xs lg:text-sm font-medium text-white">
@@ -181,10 +314,10 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({ initialData }) => {
                   </tr>
                 );
               })}
-              {data.length === 0 && (
+              {processedData.length === 0 && (
                  <tr>
                    <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
-                     No hay registros disponibles.
+                     No hay registros que coincidan con los filtros.
                    </td>
                  </tr>
               )}
