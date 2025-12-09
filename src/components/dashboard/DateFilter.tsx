@@ -53,15 +53,15 @@ export const DateFilter: React.FC = () => {
 
   return (
     <div className="flex flex-col sm:flex-row gap-2 sm:items-center relative">
-      <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
+      <div className="flex bg-[#111c16] border border-[#1e3327] rounded-lg p-1 gap-1">
         {ranges.map((r) => (
           <button
             key={r.value}
             onClick={() => handleRangeClick(r.value)}
-            className={`flex-shrink-0 px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+            className={`flex-shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
               range === r.value
-                ? 'bg-[#1e3327] text-white'
-                : 'bg-transparent text-gray-500 hover:text-gray-300 hover:bg-[#162119]'
+                ? 'bg-[#1e3327] text-white shadow-sm'
+                : 'text-gray-400 hover:text-gray-200 hover:bg-[#162119]'
             }`}
           >
             {r.label}

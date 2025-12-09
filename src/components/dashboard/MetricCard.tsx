@@ -73,34 +73,20 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     // El último registro dentro del rango filtrado
     const last = filteredData[filteredData.length - 1];
     
-    // Si queremos calcular el delta relativo al periodo anterior dentro del mismo dataset filtrado,
-    // necesitamos el penúltimo registro del rango filtrado.
-    // Sin embargo, para mantener consistencia con "delta vs registro anterior inmediato",
-    // tomamos el penúltimo del filteredData.
-    // Si filteredData tiene solo 1 elemento, no hay delta calculado en cliente (o es 0/undefined).
-    
-    const prev = filteredData.length > 1 ? filteredData[filteredData.length - 2] : null;
+    // El primer registro dentro del rango filtrado (para calcular cambio en el periodo)
+    const first = filteredData.length > 0 ? filteredData[0] : null;
     
     // Valor actual del último registro en el rango
     const currentVal = last[dataKey];
     
-    // Calcular delta si tenemos previo
+    // Calcular delta basado en el rango seleccionado
     let calcDelta = 0;
-    if (prev) {
-        const prevVal = prev[dataKey];
-        // Calcular porcentaje de cambio: ((nuevo - viejo) / viejo) * 100 ??
-        // El dashboard original muestra delta como diferencia porcentual? 
-        // Revisando el código original en utils/dataProcessor.ts:
-        // Peso: Number((last.Peso - previous.Peso).toFixed(2)) -> Diferencia absoluta, NO porcentaje.
-        // Pero en el componente MetricCard original mostraba "{Math.abs(delta)}%".
-        // Esto es confuso. Si el delta es diferencia absoluta (kg), mostrarlo con símbolo % es incorrecto visualmente 
-        // O el delta original YA ERA porcentaje? 
-        // Revisando dataProcessor.ts: "Peso: Number((last.Peso - previous.Peso).toFixed(2))" -> Es diferencia absoluta en KG.
-        // Pero MetricCard renderiza: "{Math.abs(delta)}%".
-        // Esto parece un bug visual preexistente (muestra KG como %).
-        // Asumiremos que se desea mantener la lógica de "diferencia con el anterior".
+    if (first && first !== last) {
+        const firstVal = first[dataKey];
         
-        calcDelta = Number((currentVal - prevVal).toFixed(2));
+        // Calcular diferencia absoluta: Final - Inicial
+        calcDelta = currentVal - firstVal;
+        calcDelta = Number(calcDelta.toFixed(1));
     }
     
     return { current: currentVal, calculatedDelta: calcDelta };
@@ -153,7 +139,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         {displayDelta !== undefined && displayDelta !== 0 && TrendIcon && (
           <span className={`text-[10px] sm:text-xs font-medium ${trendColor} flex items-center`}>
             <TrendIcon className="h-3 w-3 mr-0.5" />
-            {Math.abs(displayDelta)}%
+            {Math.abs(displayDelta)} {unit}
           </span>
         )}
       </div>

@@ -29,14 +29,14 @@ const previousRecord = (hasData && data.length > 1) ? data[data.length - 2] : nu
         </a>
     </div>
 
-    {/* Filters */}
-    <DateFilter client:load />
+    {/* Section Title & Filters */}
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 lg:mb-5">
+        <h2 class="text-sm sm:text-base font-semibold text-white">Progreso a lo Largo del Tiempo</h2>
+        <DateFilter client:load />
+    </div>
 
-    {/* Section Title */}
+    {/* Metrics Grid - 1 column mobile, 2 tablet, 3 desktop */}
     <div>
-        <h2 class="text-sm sm:text-base font-semibold text-white mb-4 lg:mb-5">Progreso a lo Largo del Tiempo</h2>
-        
-        {/* Metrics Grid - 1 column mobile, 2 tablet, 3 desktop */}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
             {hasData ? (
             <>
