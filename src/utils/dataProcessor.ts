@@ -1,6 +1,7 @@
-import { type RegistroCorporal, type RegistroCorporalRaw } from './data';
-import fs from 'node:fs';
-import path from 'node:path';
+import { type RegistroCorporal } from './data';
+import { db } from '../db/client';
+import { bodyMetrics } from '../db/schema';
+import { desc, asc } from 'drizzle-orm';
 
 export function parseDate(dateStr: string): Date {
   if (!dateStr) return new Date();
@@ -8,93 +9,37 @@ export function parseDate(dateStr: string): Date {
   return new Date(year, month - 1, day);
 }
 
-// Mapping between CSV headers and internal interface keys
-const CSV_MAPPING: Record<string, keyof RegistroCorporalRaw> = {
-  'Date': 'Fecha',
-  'Weight (kg)': 'Peso',
-  'BMI': 'IMC',
-  'Fat Mass (kg)': 'GrasaKg',
-  'Fat Mass (%)': 'GrasaPorc',
-  'Fat Free Mass (kg)': 'MasaLibreKg',
-  'Muscle Mass (kg)': 'MusculoKg',
-  'Total Body Water (kg)': 'AguaKg',
-  'Total Body Water (%)': 'AguaPorc',
-  'Basal Metabolic Rate (kcal)': 'MetabolismoBasal',
-  'Metabolic Age': 'EdadMetabolica',
-  'Visceral Fat Rating': 'GrasaVisceral',
-  'Bone Mineral Mass (kg)': 'MasaOsea',
-  'Phase Angle': 'AnguloFase',
-  'Resistance (R)': 'Resistencia',
-  'Reactance (Xc)': 'Reactancia'
-};
-
-function loadRawData(): RegistroCorporalRaw[] {
-  try {
-    const filePath = path.join(process.cwd(), 'src', 'data', 'registros.csv');
-    const fileContent = fs.readFileSync(filePath, 'utf-8');
-    
-    const lines = fileContent.trim().split('\n');
-    const headers = lines[0].trim().split(',');
-    
-    const data: RegistroCorporalRaw[] = [];
-    
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      
-      const values = line.split(',');
-      const entry: any = {};
-      let hasRequiredFields = true;
-      
-      headers.forEach((header, index) => {
-        const trimmedHeader = header.trim();
-        const internalKey = CSV_MAPPING[trimmedHeader];
-        
-        if (internalKey) {
-            const value = values[index]?.trim();
-            
-            if (internalKey === 'Fecha') {
-                entry[internalKey] = value;
-            } else {
-                entry[internalKey] = parseFloat(value);
-            }
-        }
-      });
-
-      // Basic validation
-      if (!entry.Fecha || !entry.Peso) {
-         console.warn(`Skipping invalid row ${i}:`, line);
-         continue;
-      }
-      
-      // Ensure all required fields exist (fill with 0 if missing to avoid crashes)
-      const requiredFields: (keyof RegistroCorporalRaw)[] = [
-        'Peso', 'IMC', 'GrasaKg', 'GrasaPorc', 'MasaLibreKg', 'MusculoKg',
-        'AguaKg', 'AguaPorc', 'MetabolismoBasal', 'EdadMetabolica',
-        'GrasaVisceral', 'MasaOsea', 'AnguloFase', 'Resistencia', 'Reactancia'
-      ];
-      requiredFields.forEach(field => {
-          if (entry[field] === undefined || isNaN(entry[field])) {
-              entry[field] = 0;
-          }
-      });
-      
-      data.push(entry as RegistroCorporalRaw);
-    }
-    
-    return data;
-  } catch (error) {
-    console.error("Error reading CSV:", error);
-    return [];
-  }
+// Helper to convert DB record to UI interface
+function mapDbRecordToUi(record: typeof bodyMetrics.$inferSelect): RegistroCorporal {
+  return {
+    // @ts-ignore - Date handling in Drizzle/MySQL can be tricky, ensuring Date object
+    Fecha: new Date(record.recordedAt),
+    Peso: Number(record.weight),
+    IMC: Number(record.bmi),
+    GrasaKg: Number(record.fatMassKg),
+    GrasaPorc: Number(record.fatMassPercent),
+    MasaLibreKg: Number(record.freeMassKg),
+    MusculoKg: Number(record.muscleMassKg),
+    AguaKg: Number(record.waterKg),
+    AguaPorc: Number(record.waterPercent),
+    MetabolismoBasal: Number(record.bmr),
+    EdadMetabolica: Number(record.metabolicAge),
+    GrasaVisceral: Number(record.visceralFat),
+    MasaOsea: Number(record.boneMassKg),
+    AnguloFase: Number(record.phaseAngle),
+    Resistencia: Number(record.resistance),
+    Reactancia: Number(record.reactance)
+  };
 }
 
-export function getProcessedData(): RegistroCorporal[] {
-  const rawData = loadRawData();
-  return rawData.map(record => ({
-    ...record,
-    Fecha: parseDate(record.Fecha)
-  })).sort((a, b) => a.Fecha.getTime() - b.Fecha.getTime());
+export async function getProcessedData(): Promise<RegistroCorporal[]> {
+  try {
+    const records = await db.select().from(bodyMetrics).orderBy(asc(bodyMetrics.recordedAt));
+    return records.map(mapDbRecordToUi);
+  } catch (error) {
+    console.error("Error fetching data from DB:", error);
+    return [];
+  }
 }
 
 export interface DataWithDelta extends RegistroCorporal {
@@ -117,8 +62,8 @@ export interface DataWithDelta extends RegistroCorporal {
   }
 }
 
-export function getLastRecordWithDelta(): DataWithDelta | null {
-  const data = getProcessedData();
+export async function getLastRecordWithDelta(): Promise<DataWithDelta | null> {
+  const data = await getProcessedData();
   if (data.length === 0) return null;
 
   const last = data[data.length - 1];
