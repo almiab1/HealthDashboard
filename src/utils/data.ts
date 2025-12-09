@@ -18,5 +18,6 @@ export interface RegistroCorporalRaw {
 }
 
 export interface RegistroCorporal extends Omit<RegistroCorporalRaw, 'Fecha'> {
+  id: number;
   Fecha: Date;
 }

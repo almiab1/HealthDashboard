@@ -12,6 +12,7 @@ export function parseDate(dateStr: string): Date {
 // Helper to convert DB record to UI interface
 function mapDbRecordToUi(record: typeof bodyMetrics.$inferSelect): RegistroCorporal {
   return {
+    id: record.id,
     // @ts-ignore - Date handling in Drizzle/MySQL can be tricky, ensuring Date object
     Fecha: new Date(record.recordedAt),
     Peso: Number(record.weight),

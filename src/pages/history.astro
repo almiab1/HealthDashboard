@@ -1,0 +1,11 @@
+---
+import MainLayout from '@/layouts/MainLayout.astro';
+import { getProcessedData } from '@/utils/dataProcessor';
+import { HistoryTable } from '@/components/history/HistoryTable';
+
+const data = await getProcessedData();
+---
+
+<MainLayout title="Histórico de Mediciones">
+    <HistoryTable client:load initialData={data} />
+</MainLayout>
