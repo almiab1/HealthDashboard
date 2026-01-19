@@ -124,37 +124,35 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   };
 
   return (
-    <div className="rounded-xl bg-[#111c16] border border-[#1e3327] p-4 sm:p-5 overflow-hidden">
-      {/* Header */}
-      <div className="mb-1">
-        <p className="text-xs sm:text-sm text-gray-400 font-medium">{title}</p>
+    <div className="rounded-xl bg-[#111c16] border border-[#1e3327] p-3 overflow-hidden flex flex-col h-full">
+      {/* Header + Value Row */}
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">{title}</p>
+        <div className="flex items-center gap-1.5">
+          {displayDelta !== undefined && displayDelta !== 0 && TrendIcon && (
+            <span className={`text-[10px] font-medium ${trendColor} flex items-center`}>
+              <TrendIcon className="h-3 w-3 mr-0.5" />
+              {Math.abs(displayDelta)} {unit}
+            </span>
+          )}
+        </div>
       </div>
       
       {/* Value */}
-      <div className="mb-2 sm:mb-3">
-        <span className="text-2xl sm:text-3xl font-bold text-white tracking-tight">{displayValue}</span>
-        <span className="text-lg sm:text-xl text-gray-400 ml-1">{unit}</span>
+      <div className="flex items-baseline gap-1 mb-1">
+        <span className="text-2xl font-bold text-white tracking-tight">{displayValue}</span>
+        <span className="text-sm text-gray-500">{unit}</span>
+        <span className="text-[9px] text-gray-600 ml-2">{getRangeLabel()}</span>
       </div>
       
-      {/* Trend */}
-      <div className="flex items-center gap-2 mb-3 sm:mb-4">
-        <span className="text-[10px] sm:text-xs text-gray-500">{getRangeLabel()}</span>
-        {displayDelta !== undefined && displayDelta !== 0 && TrendIcon && (
-          <span className={`text-[10px] sm:text-xs font-medium ${trendColor} flex items-center`}>
-            <TrendIcon className="h-3 w-3 mr-0.5" />
-            {Math.abs(displayDelta)} {unit}
-          </span>
-        )}
-      </div>
-      
-      {/* Chart */}
-      <div className="h-[80px] sm:h-[100px] w-full" style={{ minHeight: '80px' }}>
+      {/* Chart - Fixed height */}
+      <div className="flex-1 w-full" style={{ minHeight: '50px' }}>
         {filteredData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={80}>
+          <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={filteredData} margin={{ top: 5, right: 5, left: 5, bottom: 0 }}>
               <defs>
                 <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={color} stopOpacity={0.25}/>
+                  <stop offset="0%" stopColor={color} stopOpacity={0.3}/>
                   <stop offset="100%" stopColor={color} stopOpacity={0}/>
                 </linearGradient>
               </defs>
@@ -170,21 +168,15 @@ export const MetricCard: React.FC<MetricCardProps> = ({
                 strokeWidth={2}
                 fillOpacity={1} 
                 fill={`url(#${gradientId})`} 
-                activeDot={{ r: 3, strokeWidth: 2, stroke: color, fill: '#111c16' }}
+                activeDot={{ r: 4, strokeWidth: 2, stroke: color, fill: '#111c16' }}
               />
             </AreaChart>
           </ResponsiveContainer>
         ) : (
-          <div className="flex items-center justify-center h-full text-gray-600 text-xs">
+          <div className="flex items-center justify-center h-full text-gray-600 text-[10px]">
             Sin datos en este periodo
           </div>
         )}
-      </div>
-      
-      {/* X-axis labels (Simplified for now as they are static in original) */}
-      <div className="flex justify-between text-[9px] sm:text-[10px] text-gray-600 mt-2 px-1">
-        <span>Inicio</span>
-        <span>Fin</span>
       </div>
     </div>
   );

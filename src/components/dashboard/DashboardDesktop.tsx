@@ -61,153 +61,67 @@ interface RecentTableProps {
 }
 
 const RecentTableDesktop: React.FC<RecentTableProps> = ({ lastRecord, previousRecord, delta }) => {
-  const simpleMetrics = [
-    { id: 'Peso', label: 'Peso', description: 'Suma total de componentes del cuerpo.', value: lastRecord.Peso, prev: previousRecord?.Peso, delta: delta?.Peso, unit: 'kg', inverse: true },
-    { id: 'IMC', label: 'IMC', description: 'Relación entre peso y altura (Peso / Altura²).', value: lastRecord.IMC, prev: previousRecord?.IMC, delta: delta?.IMC, unit: '', inverse: true },
+  const allMetrics = [
+    { id: 'Peso', label: 'Peso', value: lastRecord.Peso, prev: previousRecord?.Peso, delta: delta?.Peso, unit: 'kg', inverse: true },
+    { id: 'IMC', label: 'IMC', value: lastRecord.IMC, prev: previousRecord?.IMC, delta: delta?.IMC, unit: '', inverse: true },
+    { id: 'GrasaKg', label: 'Grasa', value: lastRecord.GrasaKg, prev: previousRecord?.GrasaKg, delta: delta?.GrasaKg, unit: 'kg', inverse: true },
+    { id: 'GrasaPorc', label: '% Grasa', value: lastRecord.GrasaPorc, prev: previousRecord?.GrasaPorc, delta: delta?.GrasaPorc, unit: '%', inverse: true },
+    { id: 'MusculoKg', label: 'Músculo', value: lastRecord.MusculoKg, prev: previousRecord?.MusculoKg, delta: delta?.MusculoKg, unit: 'kg', inverse: false },
+    { id: 'AguaPorc', label: '% Agua', value: lastRecord.AguaPorc, prev: previousRecord?.AguaPorc, delta: delta?.AguaPorc, unit: '%', inverse: false },
+    { id: 'MasaLibreKg', label: 'M. Libre Grasa', value: lastRecord.MasaLibreKg, prev: previousRecord?.MasaLibreKg, delta: delta?.MasaLibreKg, unit: 'kg', inverse: false },
+    { id: 'MetabolismoBasal', label: 'Metab. Basal', value: lastRecord.MetabolismoBasal, prev: previousRecord?.MetabolismoBasal, delta: delta?.MetabolismoBasal, unit: 'kcal', inverse: false },
+    { id: 'GrasaVisceral', label: 'G. Visceral', value: lastRecord.GrasaVisceral, prev: previousRecord?.GrasaVisceral, delta: delta?.GrasaVisceral, unit: '', inverse: true },
   ];
 
-  const combinedMetrics = [
-    { 
-      id: 'Grasa', 
-      label: 'Grasa Corporal',
-      description: 'Cantidad total de tejido adiposo en el cuerpo.',
-      valueKg: lastRecord.GrasaKg, 
-      valuePorc: lastRecord.GrasaPorc,
-      prevKg: previousRecord?.GrasaKg, 
-      prevPorc: previousRecord?.GrasaPorc,
-      deltaKg: delta?.GrasaKg,
-      deltaPorc: delta?.GrasaPorc,
-      inverse: true 
-    },
-    { 
-      id: 'Agua', 
-      label: 'Agua Corporal',
-      description: 'Cantidad de fluidos en el cuerpo.',
-      valueKg: lastRecord.AguaKg, 
-      valuePorc: lastRecord.AguaPorc,
-      prevKg: previousRecord?.AguaKg, 
-      prevPorc: previousRecord?.AguaPorc,
-      deltaKg: delta?.AguaKg,
-      deltaPorc: delta?.AguaPorc,
-      inverse: false 
-    },
-  ];
-
-  const otherMetrics = [
-    { id: 'MasaLibreKg', label: 'Masa Libre de Grasa', description: 'Músculo + Hueso + Agua + Órganos.', value: lastRecord.MasaLibreKg, prev: previousRecord?.MasaLibreKg, delta: delta?.MasaLibreKg, unit: 'kg', inverse: false },
-    { id: 'MusculoKg', label: 'Masa Muscular', description: 'Peso de músculos esqueléticos y lisos.', value: lastRecord.MusculoKg, prev: previousRecord?.MusculoKg, delta: delta?.MusculoKg, unit: 'kg', inverse: false },
-    { id: 'MetabolismoBasal', label: 'Metabolismo Basal', description: 'Energía que tu cuerpo quema en reposo en 24h.', value: lastRecord.MetabolismoBasal, prev: previousRecord?.MetabolismoBasal, delta: delta?.MetabolismoBasal, unit: 'kcal', inverse: false },
-    { id: 'EdadMetabolica', label: 'Edad Metabólica', description: 'Comparación de TMB con la media de tu edad.', value: lastRecord.EdadMetabolica, prev: previousRecord?.EdadMetabolica, delta: delta?.EdadMetabolica, unit: 'años', inverse: true },
-    { id: 'GrasaVisceral', label: 'Grasa Visceral', description: 'Grasa que rodea órganos vitales en zona abdominal.', value: lastRecord.GrasaVisceral, prev: previousRecord?.GrasaVisceral, delta: delta?.GrasaVisceral, unit: '', inverse: true },
-  ];
-
-  const renderTrendIcon = (delta: number | undefined) => {
+  const renderTrendIcon = (delta: number | undefined, small = false) => {
     if (!delta || delta === 0) return null;
-    return delta > 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />;
+    const size = small ? "h-3 w-3" : "h-4 w-4";
+    return delta > 0 ? <TrendingUp className={size} /> : <TrendingDown className={size} />;
   };
 
   const formatDelta = (delta: number | undefined, unit: string) => {
     if (delta === undefined) return '-';
     const prefix = delta > 0 ? '+' : '';
-    const unitStr = unit && unit !== '%' ? ' ' + unit : unit;
+    const unitStr = unit && unit !== '%' ? '' : unit;
     return `${prefix}${delta}${unitStr}`;
   };
 
   return (
-    <div>
-      <h2 className="text-sm sm:text-base font-semibold text-white mb-4 lg:mb-5">Último Registro</h2>
-      <div className="rounded-xl bg-[#111c16] border border-[#1e3327] overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[500px]">
-            <thead>
-              <tr className="border-b border-[#1e3327]">
-                <th className="text-left px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Métrica</th>
-                <th className="text-left px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Último Valor</th>
-                <th className="text-left px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Valor Anterior</th>
-                <th className="text-right px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Cambio</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* Simple metrics */}
-              {simpleMetrics.map((metric) => {
-                const trendColor = getTrendColor(metric.delta, metric.inverse);
-                return (
-                  <tr key={metric.id} className="hover:bg-[#162119] transition-colors border-b border-[#1e3327]">
-                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm font-medium text-white">
-                      <div className="flex items-center">
-                        {metric.label}
-                        <MetricTooltip description={metric.description} />
-                      </div>
-                    </td>
-                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm text-white">{metric.value} {metric.unit}</td>
-                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm text-gray-500">{metric.prev ?? '-'} {metric.unit}</td>
-                    <td className={`px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm font-medium text-right ${trendColor}`}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        <span>{formatDelta(metric.delta, metric.unit)}</span>
-                        {renderTrendIcon(metric.delta)}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              
-              {/* Combined metrics (kg | %) */}
-              {combinedMetrics.map((metric) => {
-                const trendColorKg = getTrendColor(metric.deltaKg, metric.inverse);
-                const trendColorPorc = getTrendColor(metric.deltaPorc, metric.inverse);
-                return (
-                  <tr key={metric.id} className="hover:bg-[#162119] transition-colors border-b border-[#1e3327]">
-                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm font-medium text-white">
-                      <div className="flex items-center">
-                        {metric.label}
-                        <MetricTooltip description={metric.description} />
-                      </div>
-                    </td>
-                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm text-white">
-                      {metric.valueKg} kg <span className="text-gray-500 mx-1">|</span> {metric.valuePorc}%
-                    </td>
-                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm text-gray-500">
-                      {metric.prevKg ?? '-'} kg <span className="mx-1">|</span> {metric.prevPorc ?? '-'}%
-                    </td>
-                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm font-medium text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <span className={trendColorKg}>{formatDelta(metric.deltaKg, 'kg')}</span>
-                        {renderTrendIcon(metric.deltaKg)}
-                        <span className="text-gray-600 mx-0.5">|</span>
-                        <span className={trendColorPorc}>{formatDelta(metric.deltaPorc, '%')}</span>
-                        {renderTrendIcon(metric.deltaPorc)}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              
-              {/* Other simple metrics */}
-              {otherMetrics.map((metric, index) => {
-                const trendColor = getTrendColor(metric.delta, metric.inverse);
-                const isLast = index === otherMetrics.length - 1;
-                return (
-                  <tr key={metric.id} className={`hover:bg-[#162119] transition-colors ${!isLast ? 'border-b border-[#1e3327]' : ''}`}>
-                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm font-medium text-white">
-                      <div className="flex items-center">
-                        {metric.label}
-                        <MetricTooltip description={metric.description} />
-                      </div>
-                    </td>
-                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm text-white">{metric.value} {metric.unit}</td>
-                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm text-gray-500">{metric.prev ?? '-'} {metric.unit}</td>
-                    <td className={`px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm font-medium text-right ${trendColor}`}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        <span>{formatDelta(metric.delta, metric.unit)}</span>
-                        {renderTrendIcon(metric.delta)}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+    <div className="rounded-xl bg-[#111c16] border border-[#1e3327] overflow-hidden">
+      <div className="px-4 py-3 border-b border-[#1e3327]">
+        <h2 className="text-sm font-semibold text-white">Último Registro</h2>
+        <p className="text-xs text-gray-400">{lastRecord.Fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+      </div>
+      <div>
+        <table className="w-full">
+          <thead className="bg-[#0d1712]">
+            <tr className="border-b border-[#1e3327]">
+              <th className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Métrica</th>
+              <th className="text-right px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Actual</th>
+              <th className="text-right px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Anterior</th>
+              <th className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Cambio</th>
+            </tr>
+          </thead>
+          <tbody>
+            {allMetrics.map((metric, index) => {
+              const trendColor = getTrendColor(metric.delta, metric.inverse);
+              const isLast = index === allMetrics.length - 1;
+              return (
+                <tr key={metric.id} className={`hover:bg-[#162119] transition-colors ${!isLast ? 'border-b border-[#1e3327]' : ''}`}>
+                  <td className="px-4 py-2.5 text-sm font-medium text-white whitespace-nowrap">{metric.label}</td>
+                  <td className="px-3 py-2.5 text-sm text-white text-right whitespace-nowrap font-semibold">{metric.value}{metric.unit === '%' ? '%' : metric.unit ? ` ${metric.unit}` : ''}</td>
+                  <td className="px-3 py-2.5 text-sm text-gray-400 text-right">{metric.prev ?? '-'}</td>
+                  <td className={`px-4 py-2.5 text-sm font-semibold text-right ${trendColor}`}>
+                    <div className="flex items-center justify-end gap-1">
+                      <span>{formatDelta(metric.delta, metric.unit)}</span>
+                      {renderTrendIcon(metric.delta, false)}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -295,76 +209,84 @@ export const DashboardDesktop: React.FC = () => {
   const delta = lastRecord && previousRecord ? calculateDelta(lastRecord, previousRecord) : null;
 
   return (
-    <div className="space-y-6 lg:space-y-8">
+    <div className="flex flex-col h-[calc(100vh-110px)] overflow-hidden">
       {/* Header Section */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex-shrink-0 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between mb-3">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Hola, Alex</h1>
-          <p className="text-gray-500 mt-1 text-sm sm:text-base">Aquí puedes ver tu progreso semanal.</p>
+          <p className="text-gray-500 mt-0.5 text-sm">Aquí puedes ver tu progreso semanal.</p>
         </div>
         <a 
           href="/register" 
-          className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-2.5 px-5 rounded-lg flex items-center justify-center transition-colors shadow-lg shadow-emerald-500/20"
+          className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-2 px-4 rounded-lg flex items-center justify-center transition-colors shadow-lg shadow-emerald-500/20 text-sm"
         >
-          <Plus className="mr-2 h-5 w-5" />
+          <Plus className="mr-2 h-4 w-4" />
           Registrar Nuevas Medidas
         </a>
       </div>
 
-      {/* Section Title & Filters */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 lg:mb-5">
-        <h2 className="text-sm sm:text-base font-semibold text-white">Progreso a lo Largo del Tiempo</h2>
+      <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+        <h2 className="text-sm font-semibold text-white">Progreso a lo Largo del Tiempo</h2>
         <DateFilter />
       </div>
 
-      {/* Metrics Grid */}
-      <div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
+      {/* Main Content - Two Column Layout: Charts LEFT (wide), Table RIGHT (narrow) */}
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-3">
+        {/* Left Column: Metrics with Charts - Takes most space */}
+        <div className="flex-1 flex flex-col gap-2 order-2 md:order-1">
           {hasData && lastRecord ? (
             <>
-              <MetricCard 
-                title="Peso (kg)" 
-                value={lastRecord.Peso} 
-                unit="kg" 
-                delta={delta?.Peso} 
-                inverseTrend={true}
-                data={data}
-                dataKey="Peso"
-                color="#4ade80"
-              />
-              <MetricCard 
-                title="Porcentaje de Grasa (%)" 
-                value={lastRecord.GrasaPorc} 
-                unit="%" 
-                delta={delta?.GrasaPorc} 
-                inverseTrend={true}
-                data={data}
-                dataKey="GrasaPorc"
-                color="#d97706"
-              />
-              <MetricCard 
-                title="Masa Muscular (kg)" 
-                value={lastRecord.MusculoKg} 
-                unit="kg" 
-                delta={delta?.MusculoKg} 
-                inverseTrend={false}
-                data={data}
-                dataKey="MusculoKg"
-                color="#38bdf8"
-              />
+              <div className="flex-1 min-h-[100px]">
+                <MetricCard 
+                  title="Peso (kg)" 
+                  value={lastRecord.Peso} 
+                  unit="kg" 
+                  delta={delta?.Peso} 
+                  inverseTrend={true}
+                  data={data}
+                  dataKey="Peso"
+                  color="#4ade80"
+                />
+              </div>
+              <div className="flex-1 min-h-[100px]">
+                <MetricCard 
+                  title="Porcentaje de Grasa (%)" 
+                  value={lastRecord.GrasaPorc} 
+                  unit="%" 
+                  delta={delta?.GrasaPorc} 
+                  inverseTrend={true}
+                  data={data}
+                  dataKey="GrasaPorc"
+                  color="#d97706"
+                />
+              </div>
+              <div className="flex-1 min-h-[100px]">
+                <MetricCard 
+                  title="Masa Muscular (kg)" 
+                  value={lastRecord.MusculoKg} 
+                  unit="kg" 
+                  delta={delta?.MusculoKg} 
+                  inverseTrend={false}
+                  data={data}
+                  dataKey="MusculoKg"
+                  color="#38bdf8"
+                />
+              </div>
             </>
           ) : (
-            <div className="col-span-full text-center py-10 text-gray-500">
+            <div className="flex items-center justify-center h-full text-center text-gray-500 bg-[#111c16] border border-[#1e3327] rounded-xl p-8">
               No hay registros disponibles. Empieza registrando una nueva medida.
             </div>
           )}
         </div>
-      </div>
 
-      {/* Recent History - Full table */}
-      {hasData && lastRecord && (
-        <RecentTableDesktop lastRecord={lastRecord} previousRecord={previousRecord} delta={delta} />
-      )}
+        {/* Right Column: Recent History Table - ~33% width */}
+        {hasData && lastRecord && (
+          <div className="w-full md:w-[33%] flex-shrink-0 order-1 md:order-2">
+            <RecentTableDesktop lastRecord={lastRecord} previousRecord={previousRecord} delta={delta} />
+          </div>
+        )}
+      </div>
     </div>
   );
 };
