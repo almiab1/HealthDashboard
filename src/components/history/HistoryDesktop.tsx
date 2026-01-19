@@ -9,23 +9,53 @@ export const HistoryDesktop: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('[HistoryDesktop] Cargando datos...');
       const records = await getAllRecords();
+      console.log('[HistoryDesktop] Registros obtenidos:', records.length);
       setData(records);
       setError(null);
     } catch (err) {
       setError('Error al cargar los datos');
-      console.error(err);
+      console.error('[HistoryDesktop] Error:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadData();
+    
+    // Recargar cuando se vuelve a esta página
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[HistoryDesktop] Página visible, recargando datos...');
+        loadData();
+      }
+    };
+    
+    const handleFocus = () => {
+      console.log('[HistoryDesktop] Ventana enfocada, recargando datos...');
+      loadData();
+    };
+    
+    const handleRecordsUpdated = () => {
+      console.log('[HistoryDesktop] Evento records-updated recibido');
+      loadData();
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('records-updated', handleRecordsUpdated);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('records-updated', handleRecordsUpdated);
+    };
+  }, []);
 
   if (loading) {
     return (

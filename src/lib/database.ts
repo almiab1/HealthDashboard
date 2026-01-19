@@ -50,19 +50,35 @@ interface TauriBodyMetric {
 
 // Detectar si estamos en Tauri
 function isTauri(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+  if (typeof window === 'undefined') return false;
+  const w = window as unknown as {
+    __TAURI__?: unknown;
+    __TAURI_INTERNALS__?: unknown;
+    __TAURI_IPC__?: unknown;
+    __TAURI_INVOKE__?: unknown;
+  };
+  return Boolean(w.__TAURI__ || w.__TAURI_INTERNALS__ || w.__TAURI_IPC__ || w.__TAURI_INVOKE__);
+}
+
+async function tryInvokeTauri<T>(command: string, payload: Record<string, unknown>): Promise<T> {
+  const { invoke } = await import('@tauri-apps/api/core');
+  return invoke<T>(command, payload);
 }
 
 // Convertir fecha DD/MM/YYYY a YYYY-MM-DD (formato ISO para SQLite)
 function dateToISO(dateStr: string): string {
   const [day, month, year] = dateStr.split('/').map(Number);
+  // Asegurar formato YYYY-MM-DD con padding
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 // Convertir fecha ISO a DD/MM/YYYY
 function isoToDate(isoStr: string): Date {
-  const [year, month, day] = isoStr.split('-').map(Number);
-  return new Date(year, month - 1, day);
+    // Si viene como string ISO completo (con T), tomamos solo la parte de la fecha
+    const cleanIso = isoStr.split('T')[0]; 
+    const [year, month, day] = cleanIso.split('-').map(Number);
+    // Devolver fecha al mediodía para evitar cambios de día por zona horaria local
+    return new Date(year, month - 1, day, 12, 0, 0);
 }
 
 // Convertir RecordInput a TauriBodyMetric
@@ -116,31 +132,42 @@ function tauriMetricToRegistro(metric: TauriBodyMetric): RegistroCorporal {
  * Crear un nuevo registro
  */
 export async function createRecord(data: RecordInput): Promise<{ success: boolean; error?: string }> {
-  if (isTauri()) {
+  const tauriDetected = isTauri();
+  console.log('[DB] createRecord llamado. isTauri():', tauriDetected);
+  console.log('[DB] window.__TAURI__:', typeof window !== 'undefined' ? (window as any).__TAURI__ : 'N/A');
+  console.log('[DB] window.__TAURI_INTERNALS__:', typeof window !== 'undefined' ? (window as any).__TAURI_INTERNALS__ : 'N/A');
+  
+  if (tauriDetected) {
+    console.log('[DB] Usando Tauri para guardar...');
     try {
-      const { invoke } = await import('@tauri-apps/api/core');
       const metric = inputToTauriMetric(data);
-      await invoke('create_record', { data: metric });
+      console.log('[DB] Métrica a guardar:', metric);
+      await tryInvokeTauri('create_record', { data: metric });
+      console.log('[DB] Guardado exitoso en Tauri!');
       return { success: true };
     } catch (error) {
+      console.error('[DB] Error en Tauri invoke:', error);
       return { success: false, error: String(error) };
     }
-  } else {
-    // Versión Web - usar API de Astro
-    try {
-      const response = await fetch('/api/records', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      const result = await response.json();
-      if (response.ok) {
-        return { success: true };
-      }
-      return { success: false, error: result.error || 'Error al guardar' };
-    } catch (error) {
-      return { success: false, error: 'Error de conexión con el servidor' };
+  }
+  
+  // Versión Web - usar API de Astro
+  console.log('[DB] Usando API Web para guardar...');
+  try {
+    const response = await fetch('/api/records', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    console.log('[DB] Respuesta API:', response.status, result);
+    if (response.ok) {
+      return { success: true };
     }
+    return { success: false, error: result.error || 'Error al guardar' };
+  } catch (error) {
+    console.error('[DB] Error en fetch:', error);
+    return { success: false, error: 'Error de conexión con el servidor' };
   }
 }
 
@@ -148,30 +175,30 @@ export async function createRecord(data: RecordInput): Promise<{ success: boolea
  * Actualizar un registro existente
  */
 export async function updateRecord(id: number, data: RecordInput): Promise<{ success: boolean; error?: string }> {
-  if (isTauri()) {
+  if (typeof window !== 'undefined') {
     try {
-      const { invoke } = await import('@tauri-apps/api/core');
       const metric = inputToTauriMetric(data);
-      await invoke('update_record', { id, data: metric });
+      await tryInvokeTauri('update_record', { id, data: metric });
       return { success: true };
     } catch (error) {
-      return { success: false, error: String(error) };
-    }
-  } else {
-    try {
-      const response = await fetch(`/api/records/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      const result = await response.json();
-      if (response.ok) {
-        return { success: true };
+      if (isTauri()) {
+        return { success: false, error: String(error) };
       }
-      return { success: false, error: result.error || 'Error al actualizar' };
-    } catch (error) {
-      return { success: false, error: 'Error de conexión con el servidor' };
     }
+  }
+  try {
+    const response = await fetch(`/api/records/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (response.ok) {
+      return { success: true };
+    }
+    return { success: false, error: result.error || 'Error al actualizar' };
+  } catch (error) {
+    return { success: false, error: 'Error de conexión con el servidor' };
   }
 }
 
@@ -179,28 +206,28 @@ export async function updateRecord(id: number, data: RecordInput): Promise<{ suc
  * Eliminar un registro
  */
 export async function deleteRecord(id: number): Promise<{ success: boolean; error?: string }> {
-  if (isTauri()) {
+  if (typeof window !== 'undefined') {
     try {
-      const { invoke } = await import('@tauri-apps/api/core');
-      await invoke('delete_record', { id });
+      await tryInvokeTauri('delete_record', { id });
       return { success: true };
     } catch (error) {
-      return { success: false, error: String(error) };
-    }
-  } else {
-    try {
-      const response = await fetch(`/api/records/${id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (response.ok) {
-        return { success: true };
+      if (isTauri()) {
+        return { success: false, error: String(error) };
       }
-      const result = await response.json();
-      return { success: false, error: result.error || 'Error al eliminar' };
-    } catch (error) {
-      return { success: false, error: 'Error de conexión' };
     }
+  }
+  try {
+    const response = await fetch(`/api/records/${id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (response.ok) {
+      return { success: true };
+    }
+    const result = await response.json();
+    return { success: false, error: result.error || 'Error al eliminar' };
+  } catch (error) {
+    return { success: false, error: 'Error de conexión' };
   }
 }
 
@@ -208,21 +235,24 @@ export async function deleteRecord(id: number): Promise<{ success: boolean; erro
  * Obtener todos los registros (solo útil en Tauri, en web se usa SSR)
  */
 export async function getAllRecords(): Promise<RegistroCorporal[]> {
-  if (isTauri()) {
+  const tauriDetected = isTauri();
+  console.log('[DB] getAllRecords llamado. isTauri():', tauriDetected);
+  
+  if (tauriDetected) {
+    console.log('[DB] Leyendo registros desde Tauri...');
     try {
-      const { invoke } = await import('@tauri-apps/api/core');
-      const records = await invoke<TauriBodyMetric[]>('get_all_records');
+      const records = await tryInvokeTauri<TauriBodyMetric[]>('get_all_records', {});
+      console.log('[DB] Registros obtenidos de Tauri:', records.length);
       return records.map(tauriMetricToRegistro);
     } catch (error) {
-      console.error('Error obteniendo registros:', error);
+      console.error('[DB] Error leyendo de Tauri:', error);
       return [];
     }
-  } else {
-    // En web, esto normalmente se hace con SSR en las páginas Astro
-    // Pero dejamos este método por si se necesita desde el cliente
-    console.warn('getAllRecords() llamado en modo web - usar SSR en su lugar');
-    return [];
   }
+  
+  // En web, esto normalmente se hace con SSR en las páginas Astro
+  console.warn('[DB] getAllRecords() en modo web - devolviendo []');
+  return [];
 }
 
 /**

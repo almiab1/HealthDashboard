@@ -18,7 +18,8 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Parse date DD/MM/YYYY to Date object for DB
     const [day, month, year] = body.date.split('/').map(Number);
-    const recordedAt = new Date(year, month - 1, day);
+    // Usar UTC para evitar problemas de zona horaria al guardar
+    const recordedAt = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
 
     // Preparar el objeto para insertar
     const newRecord = {

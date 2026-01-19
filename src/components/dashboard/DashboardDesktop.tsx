@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, TrendingUp, TrendingDown } from 'lucide-react';
 import { MetricCard } from './MetricCard';
 import { DateFilter } from './DateFilter';
 import { getAllRecords } from '../../lib/database';
 import type { RegistroCorporal } from '../../utils/data';
+import { MetricTooltip } from '../ui/MetricTooltip';
 
 interface DataWithDelta extends RegistroCorporal {
   delta?: {
@@ -45,28 +46,225 @@ function calculateDelta(last: RegistroCorporal, previous: RegistroCorporal): Dat
   };
 }
 
+// Helper functions for trend colors and icons
+function getTrendColor(delta: number | undefined, inverse: boolean): string {
+  if (!delta || delta === 0) return 'text-gray-500';
+  const isGood = inverse ? delta < 0 : delta > 0;
+  return isGood ? 'text-emerald-400' : 'text-red-400';
+}
+
+// Recent Table Component
+interface RecentTableProps {
+  lastRecord: RegistroCorporal;
+  previousRecord: RegistroCorporal | null;
+  delta: DataWithDelta['delta'] | null;
+}
+
+const RecentTableDesktop: React.FC<RecentTableProps> = ({ lastRecord, previousRecord, delta }) => {
+  const simpleMetrics = [
+    { id: 'Peso', label: 'Peso', description: 'Suma total de componentes del cuerpo.', value: lastRecord.Peso, prev: previousRecord?.Peso, delta: delta?.Peso, unit: 'kg', inverse: true },
+    { id: 'IMC', label: 'IMC', description: 'Relación entre peso y altura (Peso / Altura²).', value: lastRecord.IMC, prev: previousRecord?.IMC, delta: delta?.IMC, unit: '', inverse: true },
+  ];
+
+  const combinedMetrics = [
+    { 
+      id: 'Grasa', 
+      label: 'Grasa Corporal',
+      description: 'Cantidad total de tejido adiposo en el cuerpo.',
+      valueKg: lastRecord.GrasaKg, 
+      valuePorc: lastRecord.GrasaPorc,
+      prevKg: previousRecord?.GrasaKg, 
+      prevPorc: previousRecord?.GrasaPorc,
+      deltaKg: delta?.GrasaKg,
+      deltaPorc: delta?.GrasaPorc,
+      inverse: true 
+    },
+    { 
+      id: 'Agua', 
+      label: 'Agua Corporal',
+      description: 'Cantidad de fluidos en el cuerpo.',
+      valueKg: lastRecord.AguaKg, 
+      valuePorc: lastRecord.AguaPorc,
+      prevKg: previousRecord?.AguaKg, 
+      prevPorc: previousRecord?.AguaPorc,
+      deltaKg: delta?.AguaKg,
+      deltaPorc: delta?.AguaPorc,
+      inverse: false 
+    },
+  ];
+
+  const otherMetrics = [
+    { id: 'MasaLibreKg', label: 'Masa Libre de Grasa', description: 'Músculo + Hueso + Agua + Órganos.', value: lastRecord.MasaLibreKg, prev: previousRecord?.MasaLibreKg, delta: delta?.MasaLibreKg, unit: 'kg', inverse: false },
+    { id: 'MusculoKg', label: 'Masa Muscular', description: 'Peso de músculos esqueléticos y lisos.', value: lastRecord.MusculoKg, prev: previousRecord?.MusculoKg, delta: delta?.MusculoKg, unit: 'kg', inverse: false },
+    { id: 'MetabolismoBasal', label: 'Metabolismo Basal', description: 'Energía que tu cuerpo quema en reposo en 24h.', value: lastRecord.MetabolismoBasal, prev: previousRecord?.MetabolismoBasal, delta: delta?.MetabolismoBasal, unit: 'kcal', inverse: false },
+    { id: 'EdadMetabolica', label: 'Edad Metabólica', description: 'Comparación de TMB con la media de tu edad.', value: lastRecord.EdadMetabolica, prev: previousRecord?.EdadMetabolica, delta: delta?.EdadMetabolica, unit: 'años', inverse: true },
+    { id: 'GrasaVisceral', label: 'Grasa Visceral', description: 'Grasa que rodea órganos vitales en zona abdominal.', value: lastRecord.GrasaVisceral, prev: previousRecord?.GrasaVisceral, delta: delta?.GrasaVisceral, unit: '', inverse: true },
+  ];
+
+  const renderTrendIcon = (delta: number | undefined) => {
+    if (!delta || delta === 0) return null;
+    return delta > 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />;
+  };
+
+  const formatDelta = (delta: number | undefined, unit: string) => {
+    if (delta === undefined) return '-';
+    const prefix = delta > 0 ? '+' : '';
+    const unitStr = unit && unit !== '%' ? ' ' + unit : unit;
+    return `${prefix}${delta}${unitStr}`;
+  };
+
+  return (
+    <div>
+      <h2 className="text-sm sm:text-base font-semibold text-white mb-4 lg:mb-5">Último Registro</h2>
+      <div className="rounded-xl bg-[#111c16] border border-[#1e3327] overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[500px]">
+            <thead>
+              <tr className="border-b border-[#1e3327]">
+                <th className="text-left px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Métrica</th>
+                <th className="text-left px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Último Valor</th>
+                <th className="text-left px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Valor Anterior</th>
+                <th className="text-right px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Cambio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Simple metrics */}
+              {simpleMetrics.map((metric) => {
+                const trendColor = getTrendColor(metric.delta, metric.inverse);
+                return (
+                  <tr key={metric.id} className="hover:bg-[#162119] transition-colors border-b border-[#1e3327]">
+                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm font-medium text-white">
+                      <div className="flex items-center">
+                        {metric.label}
+                        <MetricTooltip description={metric.description} />
+                      </div>
+                    </td>
+                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm text-white">{metric.value} {metric.unit}</td>
+                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm text-gray-500">{metric.prev ?? '-'} {metric.unit}</td>
+                    <td className={`px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm font-medium text-right ${trendColor}`}>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <span>{formatDelta(metric.delta, metric.unit)}</span>
+                        {renderTrendIcon(metric.delta)}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              
+              {/* Combined metrics (kg | %) */}
+              {combinedMetrics.map((metric) => {
+                const trendColorKg = getTrendColor(metric.deltaKg, metric.inverse);
+                const trendColorPorc = getTrendColor(metric.deltaPorc, metric.inverse);
+                return (
+                  <tr key={metric.id} className="hover:bg-[#162119] transition-colors border-b border-[#1e3327]">
+                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm font-medium text-white">
+                      <div className="flex items-center">
+                        {metric.label}
+                        <MetricTooltip description={metric.description} />
+                      </div>
+                    </td>
+                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm text-white">
+                      {metric.valueKg} kg <span className="text-gray-500 mx-1">|</span> {metric.valuePorc}%
+                    </td>
+                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm text-gray-500">
+                      {metric.prevKg ?? '-'} kg <span className="mx-1">|</span> {metric.prevPorc ?? '-'}%
+                    </td>
+                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm font-medium text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <span className={trendColorKg}>{formatDelta(metric.deltaKg, 'kg')}</span>
+                        {renderTrendIcon(metric.deltaKg)}
+                        <span className="text-gray-600 mx-0.5">|</span>
+                        <span className={trendColorPorc}>{formatDelta(metric.deltaPorc, '%')}</span>
+                        {renderTrendIcon(metric.deltaPorc)}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              
+              {/* Other simple metrics */}
+              {otherMetrics.map((metric, index) => {
+                const trendColor = getTrendColor(metric.delta, metric.inverse);
+                const isLast = index === otherMetrics.length - 1;
+                return (
+                  <tr key={metric.id} className={`hover:bg-[#162119] transition-colors ${!isLast ? 'border-b border-[#1e3327]' : ''}`}>
+                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm font-medium text-white">
+                      <div className="flex items-center">
+                        {metric.label}
+                        <MetricTooltip description={metric.description} />
+                      </div>
+                    </td>
+                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm text-white">{metric.value} {metric.unit}</td>
+                    <td className="px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm text-gray-500">{metric.prev ?? '-'} {metric.unit}</td>
+                    <td className={`px-4 lg:px-6 py-4 lg:py-5 text-xs lg:text-sm font-medium text-right ${trendColor}`}>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <span>{formatDelta(metric.delta, metric.unit)}</span>
+                        {renderTrendIcon(metric.delta)}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const DashboardDesktop: React.FC = () => {
   const [data, setData] = useState<RegistroCorporal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('[DashboardDesktop] Cargando datos...');
       const records = await getAllRecords();
+      console.log('[DashboardDesktop] Registros obtenidos:', records.length);
       setData(records);
       setError(null);
     } catch (err) {
       setError('Error al cargar los datos');
-      console.error(err);
+      console.error('[DashboardDesktop] Error:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadData();
+    
+    // Recargar cuando se vuelve a esta página
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[DashboardDesktop] Página visible, recargando datos...');
+        loadData();
+      }
+    };
+    
+    const handleFocus = () => {
+      console.log('[DashboardDesktop] Ventana enfocada, recargando datos...');
+      loadData();
+    };
+    
+    const handleRecordsUpdated = () => {
+      console.log('[DashboardDesktop] Evento records-updated recibido');
+      loadData();
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('records-updated', handleRecordsUpdated);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('records-updated', handleRecordsUpdated);
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -163,31 +361,9 @@ export const DashboardDesktop: React.FC = () => {
         </div>
       </div>
 
-      {/* Recent History - Simplified for desktop */}
+      {/* Recent History - Full table */}
       {hasData && lastRecord && (
-        <div>
-          <h2 className="text-sm sm:text-base font-semibold text-white mb-4 lg:mb-5">Último Registro</h2>
-          <div className="rounded-xl bg-[#111c16] border border-[#1e3327] p-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-gray-500 text-xs">Fecha</p>
-                <p className="text-white font-medium">{lastRecord.Fecha.toLocaleDateString('es-ES')}</p>
-              </div>
-              <div>
-                <p className="text-gray-500 text-xs">Peso</p>
-                <p className="text-white font-medium">{lastRecord.Peso} kg</p>
-              </div>
-              <div>
-                <p className="text-gray-500 text-xs">Músculo</p>
-                <p className="text-white font-medium">{lastRecord.MusculoKg} kg</p>
-              </div>
-              <div>
-                <p className="text-gray-500 text-xs">Grasa</p>
-                <p className="text-white font-medium">{lastRecord.GrasaKg} kg ({lastRecord.GrasaPorc}%)</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <RecentTableDesktop lastRecord={lastRecord} previousRecord={previousRecord} delta={delta} />
       )}
     </div>
   );

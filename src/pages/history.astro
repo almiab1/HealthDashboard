@@ -2,10 +2,20 @@
 import MainLayout from '@/layouts/MainLayout.astro';
 import { getProcessedData } from '@/utils/dataProcessor';
 import { HistoryTable } from '@/components/history/HistoryTable';
+import { HistoryDesktop } from '@/components/history/HistoryDesktop';
 
-const data = await getProcessedData();
+export const prerender = false;
+
+// En modo Tauri, no hacemos SSR - el cliente cargará los datos
+const isTauriBuild = import.meta.env.TAURI_BUILD === true || import.meta.env.TAURI_BUILD === 'true';
+console.log('[history.astro] TAURI_BUILD:', import.meta.env.TAURI_BUILD, 'isTauriBuild:', isTauriBuild);
+const data = isTauriBuild ? [] : await getProcessedData();
 ---
 
 <MainLayout title="Histórico de Mediciones">
-    <HistoryTable client:load initialData={data} />
+    {isTauriBuild ? (
+        <HistoryDesktop client:only="react" />
+    ) : (
+        <HistoryTable client:load initialData={data} />
+    )}
 </MainLayout>

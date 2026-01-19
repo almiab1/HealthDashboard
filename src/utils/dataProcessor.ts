@@ -11,10 +11,27 @@ export function parseDate(dateStr: string): Date {
 
 // Helper to convert DB record to UI interface
 function mapDbRecordToUi(record: typeof bodyMetrics.$inferSelect): RegistroCorporal {
+  // Asegurarse de que record.recordedAt se interpreta correctamente como fecha local
+  let dateObj: Date;
+  
+  if (record.recordedAt instanceof Date) {
+    dateObj = record.recordedAt;
+  } else {
+    // Si es string, parseamos
+    const dateStr = String(record.recordedAt);
+    if (dateStr.includes('T')) {
+        dateObj = new Date(dateStr);
+    } else {
+        // Asumir YYYY-MM-DD
+        const [y, m, d] = dateStr.split('-').map(Number);
+        // Crear fecha al mediodía para evitar problemas de TZ
+        dateObj = new Date(y, m - 1, d, 12, 0, 0);
+    }
+  }
+
   return {
     id: record.id,
-    // @ts-ignore - Date handling in Drizzle/MySQL can be tricky, ensuring Date object
-    Fecha: new Date(record.recordedAt),
+    Fecha: dateObj,
     Peso: Number(record.weight),
     IMC: Number(record.bmi),
     GrasaKg: Number(record.fatMassKg),

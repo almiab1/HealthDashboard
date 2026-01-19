@@ -131,6 +131,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             setTimeout(() => {
                 onSuccess();
             }, 500);
+        } else {
+            window.dispatchEvent(new CustomEvent('records-updated'));
         }
 
       } else {
@@ -148,32 +150,75 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     setLoading(true);
 
     try {
-      // Parsear el CSV
-      const lines = csvContent.trim().split('\n');
+      // Parsear el CSV - Manejar saltos de línea universales
+      let content = csvContent.trim();
+      
+      // Limpiar BOM si existe
+      if (content.charCodeAt(0) === 0xFEFF) {
+        content = content.slice(1);
+      }
+
+      const lines = content.split(/\r?\n/);
       if (lines.length === 0) {
         toast.error('El contenido CSV está vacío');
         setLoading(false);
         return;
       }
 
-      // Procesar cada línea (puede ser solo una línea de datos o incluir encabezado)
-      const startIndex = lines[0].toLowerCase().includes('date') ? 1 : 0;
+      // Detectar encabezado
+      const headerKeywords = ['date', 'fecha', 'weight', 'peso', 'imc', 'bmi'];
+      const firstLineLower = lines[0].toLowerCase();
+      const hasHeader = headerKeywords.some(keyword => firstLineLower.includes(keyword));
+      
+      const startIndex = hasHeader ? 1 : 0;
       const dataLines = lines.slice(startIndex);
       let savedCount = 0;
+      let errorCount = 0;
+
+      console.log(`Procesando ${dataLines.length} líneas...`);
 
       for (const line of dataLines) {
         if (!line.trim()) continue;
 
-        const values = line.split(',').map(v => v.trim());
+        // Detectar delimitador
+        const semicolonCount = (line.match(/;/g) || []).length;
+        const commaCount = (line.match(/,/g) || []).length;
+        const delimiter = semicolonCount > commaCount ? ';' : ',';
+
+        let values: string[];
         
+        if (delimiter === ';') {
+            values = line.split(';').map(v => v.trim().replace(',', '.'));
+        } else {
+            values = line.split(',').map(v => v.trim());
+        }
+        
+        // Validación básica de columnas
         if (values.length < 2) {
-          toast.error('Formato CSV inválido. Debe tener al menos fecha y peso');
-          setLoading(false);
-          return;
+          console.warn('Línea ignorada (faltan columnas):', line);
+          errorCount++;
+          continue;
+        }
+
+        // Normalización de fecha
+        let dateStr = values[0].replace(/"/g, '');
+        
+        // Convertir YYYY-MM-DD a DD/MM/YYYY si es necesario
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            const [y, m, d] = dateStr.split('-');
+            dateStr = `${d}/${m}/${y}`;
+        }
+        
+        // Validar formato final DD/MM/YYYY
+        // Aceptamos D/M/YYYY también (ej: 1/1/2026)
+        if (!/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+            console.warn(`Fecha inválida ignorada: ${dateStr} en línea: ${line}`);
+            errorCount++;
+            continue;
         }
 
         const recordData: RecordInput = {
-          date: values[0],
+          date: dateStr,
           weight: values[1],
           bmi: values[2] || '',
           fatMassKg: values[3] || '',
@@ -191,22 +236,40 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           reactance: values[15] || ''
         };
 
+        console.log('Intentando guardar:', recordData);
         const result = await createRecord(recordData);
 
         if (!result.success) {
-          toast.error(result.error || 'Error al guardar el registro');
-          setLoading(false);
-          return;
+          console.error('Error guardando registro:', result.error, recordData);
+          errorCount++;
+        } else {
+          savedCount++;
         }
-        savedCount++;
       }
 
-      toast.success(`${savedCount} registro(s) guardado(s) exitosamente`);
-      setCsvContent('');
-      if (onSuccess) onSuccess();
+      if (savedCount > 0) {
+        toast.success(`${savedCount} registro(s) guardado(s) exitosamente. Ve al Historial para verlos.`, {
+          duration: 5000,
+        });
+        if (errorCount > 0) {
+            toast.warning(`Hubo ${errorCount} líneas que no se pudieron procesar.`);
+        }
+        setCsvContent('');
+        
+        // No redirigir - dejar que el usuario navegue manualmente para debug
+        if (onSuccess) {
+            onSuccess();
+        }
+        // Los datos ya están guardados en Tauri - navegar manualmente al historial
+      } else if (errorCount > 0) {
+        toast.error(`Error: No se guardaron registros. ${errorCount} líneas fallaron.`);
+      } else {
+        toast.info('No se encontraron datos válidos para guardar.');
+      }
 
     } catch (error) {
-      toast.error('Error al procesar el CSV');
+      console.error('Error procesando CSV:', error);
+      toast.error('Error interno al procesar el CSV');
     } finally {
       setLoading(false);
     }
