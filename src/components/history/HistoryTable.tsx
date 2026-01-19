@@ -3,6 +3,7 @@ import type { RegistroCorporal } from '../../utils/data';
 import { RegisterForm } from '../register/RegisterForm';
 import { Trash2, Edit, X, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, Calendar, Filter } from 'lucide-react';
 import { toast } from 'sonner';
+import { deleteRecord } from '../../lib/database';
 
 interface HistoryTableProps {
   initialData: RegistroCorporal[];
@@ -86,19 +87,13 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({ initialData }) => {
     
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/records/${deleteConfirmationId}`, { 
-        method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-      });
+      const result = await deleteRecord(deleteConfirmationId);
       
-      if (response.ok) {
+      if (result.success) {
         setData(prev => prev.filter(r => r.id !== deleteConfirmationId));
         toast.success('Registro eliminado exitosamente');
       } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Error al eliminar el registro');
+        toast.error(result.error || 'Error al eliminar el registro');
       }
     } catch (error) {
       toast.error('Error de conexión');

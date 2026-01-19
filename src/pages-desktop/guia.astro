@@ -1,0 +1,76 @@
+---
+import MainLayout from '@/layouts/MainLayout.astro';
+import { ArrowLeft } from 'lucide-react';
+---
+
+<MainLayout title="Guía de Métricas - Dashboard de Salud">
+  <div class="space-y-6 lg:space-y-8">
+    {/* Header */}
+    <div class="flex items-center gap-3">
+      <a 
+        href="/" 
+        class="p-2 rounded-lg bg-[#111c16] border border-[#1e3327] hover:bg-[#162119] transition-colors"
+      >
+        <ArrowLeft className="h-5 w-5 text-gray-400" />
+      </a>
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white">Guía de Métricas</h1>
+        <p class="text-gray-500 mt-1 text-sm sm:text-base">Entiende qué significa cada medida de tu composición corporal</p>
+      </div>
+    </div>
+
+    {/* Content */}
+    <div class="rounded-xl bg-[#111c16] border border-[#1e3327] p-6 lg:p-8 prose prose-invert max-w-none">
+      <h2>Métricas Básicas</h2>
+      
+      <h3>Peso Corporal</h3>
+      <p>Tu peso total incluyendo músculo, grasa, huesos, agua y órganos. Es útil como referencia general pero no cuenta toda la historia de tu salud.</p>
+      
+      <h3>IMC (Índice de Masa Corporal)</h3>
+      <p>Una relación entre tu peso y altura. Rangos generales:</p>
+      <ul>
+        <li><strong>&lt; 18.5</strong>: Bajo peso</li>
+        <li><strong>18.5 - 24.9</strong>: Peso normal</li>
+        <li><strong>25 - 29.9</strong>: Sobrepeso</li>
+        <li><strong>≥ 30</strong>: Obesidad</li>
+      </ul>
+      <p><em>Nota: El IMC no distingue entre músculo y grasa, por lo que puede ser engañoso para personas muy musculosas.</em></p>
+
+      <h2>Composición Corporal</h2>
+      
+      <h3>Porcentaje de Grasa Corporal</h3>
+      <p>La proporción de tu peso que corresponde a tejido adiposo. Rangos saludables típicos:</p>
+      <ul>
+        <li><strong>Hombres</strong>: 10-20%</li>
+        <li><strong>Mujeres</strong>: 18-28%</li>
+      </ul>
+      
+      <h3>Masa Muscular</h3>
+      <p>El peso de tus músculos esqueléticos. Más masa muscular generalmente indica mejor metabolismo y fuerza.</p>
+      
+      <h3>Agua Corporal Total</h3>
+      <p>El porcentaje de tu peso que es agua. Rangos normales: 45-65% dependiendo de edad y sexo.</p>
+
+      <h2>Métricas Avanzadas</h2>
+      
+      <h3>Ángulo de Fase</h3>
+      <p>Un indicador de la integridad celular y estado nutricional:</p>
+      <ul>
+        <li><strong>&lt; 5°</strong>: Puede indicar desnutrición o enfermedad</li>
+        <li><strong>5-7°</strong>: Rango normal</li>
+        <li><strong>&gt; 7°</strong>: Excelente integridad celular</li>
+      </ul>
+      
+      <h3>Grasa Visceral</h3>
+      <p>La grasa almacenada alrededor de los órganos internos. Niveles:</p>
+      <ul>
+        <li><strong>1-9</strong>: Normal</li>
+        <li><strong>10-14</strong>: Alto</li>
+        <li><strong>15+</strong>: Muy alto (riesgo de salud)</li>
+      </ul>
+      
+      <h3>Metabolismo Basal (BMR)</h3>
+      <p>Las calorías que tu cuerpo quema en reposo para mantener funciones vitales. Útil para calcular necesidades calóricas diarias.</p>
+    </div>
+  </div>
+</MainLayout>

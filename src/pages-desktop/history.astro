@@ -1,0 +1,8 @@
+---
+import MainLayout from '@/layouts/MainLayout.astro';
+import { HistoryDesktop } from '@/components/history/HistoryDesktop';
+---
+
+<MainLayout title="Histórico de Mediciones">
+  <HistoryDesktop client:only="react" />
+</MainLayout>

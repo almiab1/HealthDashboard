@@ -1,0 +1,8 @@
+---
+import MainLayout from '@/layouts/MainLayout.astro';
+import { DashboardDesktop } from '@/components/dashboard/DashboardDesktop';
+---
+
+<MainLayout title="Dashboard de Salud">
+  <DashboardDesktop client:only="react" />
+</MainLayout>

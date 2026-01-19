@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Edit, Upload, Check, AlertCircle, Loader2 } from 'lucide-react';
 import type { RegistroCorporal } from '../../utils/data';
 import { toast } from 'sonner';
+import { createRecord, updateRecord, type RecordInput } from '../../lib/database';
 
 type TabType = 'manual' | 'csv';
 
@@ -93,21 +94,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     setLoading(true);
 
     try {
-      const url = isEditing && initialData?.id 
-        ? `/api/records/${initialData.id}` 
-        : '/api/records';
+      // Usar el wrapper de base de datos (funciona en web y desktop)
+      const recordInput: RecordInput = formData;
       
-      const method = isEditing ? 'PUT' : 'POST';
+      const result = isEditing && initialData?.id 
+        ? await updateRecord(initialData.id, recordInput)
+        : await createRecord(recordInput);
 
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
+      if (result.success) {
         toast.success(isEditing ? 'Registro actualizado exitosamente' : 'Registro guardado exitosamente');
         
         if (!isEditing) {
@@ -140,7 +134,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         }
 
       } else {
-        toast.error(data.error || 'Error al guardar el registro');
+        toast.error(result.error || 'Error al guardar el registro');
       }
     } catch (error) {
       toast.error('Error de conexión con el servidor');
@@ -165,6 +159,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       // Procesar cada línea (puede ser solo una línea de datos o incluir encabezado)
       const startIndex = lines[0].toLowerCase().includes('date') ? 1 : 0;
       const dataLines = lines.slice(startIndex);
+      let savedCount = 0;
 
       for (const line of dataLines) {
         if (!line.trim()) continue;
@@ -177,7 +172,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           return;
         }
 
-        const recordData = {
+        const recordData: RecordInput = {
           date: values[0],
           weight: values[1],
           bmi: values[2] || '',
@@ -196,21 +191,17 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           reactance: values[15] || ''
         };
 
-        const response = await fetch('/api/records', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(recordData)
-        });
+        const result = await createRecord(recordData);
 
-        if (!response.ok) {
-          const data = await response.json();
-          toast.error(data.error || 'Error al guardar el registro');
+        if (!result.success) {
+          toast.error(result.error || 'Error al guardar el registro');
           setLoading(false);
           return;
         }
+        savedCount++;
       }
 
-      toast.success(`${dataLines.length} registro(s) guardado(s) exitosamente`);
+      toast.success(`${savedCount} registro(s) guardado(s) exitosamente`);
       setCsvContent('');
       if (onSuccess) onSuccess();
 

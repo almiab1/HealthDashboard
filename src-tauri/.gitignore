@@ -1,0 +1,12 @@
+# Rust build artifacts
+target/
+
+# Cargo lock (optional - keep if you want reproducible builds)
+# Cargo.lock
+
+# IDE
+.idea/
+*.iml
+
+# Debug files
+*.pdb
