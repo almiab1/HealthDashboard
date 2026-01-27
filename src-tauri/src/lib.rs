@@ -197,6 +197,16 @@ fn delete_record(db: State<DbConnection>, id: i64) -> Result<(), String> {
     Ok(())
 }
 
+// Comando: Guardar archivo CSV en la ruta especificada
+#[tauri::command]
+fn save_csv_file(content: String, filename: String) -> Result<String, String> {
+    // filename es la ruta completa del archivo (seleccionada por el usuario en el diálogo)
+    fs::write(&filename, content)
+        .map_err(|e| format!("Error guardando archivo: {}", e))?;
+    
+    Ok(filename)
+}
+
 // Comando: Obtener un registro por ID
 #[tauri::command]
 fn get_record_by_id(db: State<DbConnection>, id: i64) -> Result<Option<BodyMetric>, String> {
@@ -250,8 +260,10 @@ pub fn run() {
             create_record,
             update_record,
             delete_record,
-            get_record_by_id
+            get_record_by_id,
+            save_csv_file
         ])
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(

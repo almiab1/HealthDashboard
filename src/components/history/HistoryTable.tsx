@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import type { RegistroCorporal } from '../../utils/data';
 import { RegisterForm } from '../register/RegisterForm';
-import { Trash2, Edit, X, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Plus, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Trash2, Edit, X, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Plus, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { deleteRecord } from '../../lib/database';
+import { DownloadButton } from '../ui/DownloadButton';
 
 interface HistoryTableProps {
   initialData: RegistroCorporal[];
@@ -269,13 +270,16 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({ initialData }) => {
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Historial de Mediciones</h1>
           <p className="text-gray-500 mt-1 text-sm sm:text-base">Consulta y gestiona todos tus registros</p>
         </div>
-        <a 
-          href="/register" 
-          className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-2.5 px-5 rounded-lg flex items-center justify-center transition-colors shadow-lg shadow-emerald-500/20"
-        >
-          <Plus className="mr-2 h-5 w-5" />
-          Registrar Nuevas Medidas
-        </a>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <DownloadButton data={data} label="Exportar CSV" />
+          <a 
+            href="/register" 
+            className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-2.5 px-5 rounded-lg flex items-center justify-center transition-colors shadow-lg shadow-emerald-500/20"
+          >
+            <Plus className="mr-2 h-5 w-5" />
+            Registrar Nuevas Medidas
+          </a>
+        </div>
       </div>
 
       {/* Filters */}
