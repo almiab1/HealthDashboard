@@ -1,4 +1,12 @@
-import { mysqlTable, int, decimal, date, timestamp, tinyint } from 'drizzle-orm/mysql-core';
+import { mysqlTable, int, decimal, date, timestamp, tinyint, varchar } from 'drizzle-orm/mysql-core';
+
+// Tabla de configuraciones de la aplicación
+export const appSettings = mysqlTable('app_settings', {
+  id: int('id').autoincrement().primaryKey(),
+  key: varchar('key', { length: 50 }).notNull().unique(),
+  value: varchar('value', { length: 255 }).notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow()
+});
 
 export const bodyMetrics = mysqlTable('body_metrics', {
   id: int('id').autoincrement().primaryKey(),

@@ -129,6 +129,7 @@ const RecentTableDesktop: React.FC<RecentTableProps> = ({ lastRecord, previousRe
 
 export const DashboardDesktop: React.FC = () => {
   const [data, setData] = useState<RegistroCorporal[]>([]);
+  const [userName, setUserName] = useState<string>('Usuario');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -148,8 +149,21 @@ export const DashboardDesktop: React.FC = () => {
     }
   };
 
+  const loadUserName = async () => {
+    try {
+      const response = await fetch('/api/settings?key=userName');
+      const data = await response.json();
+      if (data.value) {
+        setUserName(data.value);
+      }
+    } catch (err) {
+      console.error('[DashboardDesktop] Error al cargar nombre:', err);
+    }
+  };
+
   useEffect(() => {
     loadData();
+    loadUserName();
     
     // Recargar cuando se vuelve a esta página
     const handleVisibilityChange = () => {
@@ -213,7 +227,7 @@ export const DashboardDesktop: React.FC = () => {
       {/* Header Section */}
       <div className="flex-shrink-0 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between mb-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Hola, Alex</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Hola, {userName}</h1>
           <p className="text-gray-500 mt-0.5 text-sm">Aquí puedes ver tu progreso semanal.</p>
         </div>
         <a 

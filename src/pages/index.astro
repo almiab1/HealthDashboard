@@ -5,6 +5,7 @@ import RecentTable from '@/components/dashboard/RecentTable.astro';
 import { DateFilter } from '@/components/dashboard/DateFilter';
 import { getProcessedData, getLastRecordWithDelta } from '@/utils/dataProcessor';
 import { DashboardDesktop } from '@/components/dashboard/DashboardDesktop';
+import { getSettingValue } from '@/utils/settings';
 import { Plus } from 'lucide-react';
 
 export const prerender = false;
@@ -16,6 +17,9 @@ console.log('[index.astro] TAURI_BUILD:', import.meta.env.TAURI_BUILD, 'isTauriB
 // Solo cargar datos del servidor si NO es Tauri
 const data = isTauriBuild ? [] : await getProcessedData();
 const lastRecord = isTauriBuild ? null : await getLastRecordWithDelta();
+
+// Obtener nombre de usuario desde configuración
+const userName = isTauriBuild ? 'Usuario' : await getSettingValue('userName', 'Usuario');
 
 // Handle case where no data exists yet (new install or empty DB)
 const hasData = lastRecord !== null;
@@ -31,7 +35,7 @@ const previousRecord = (hasData && data.length > 1) ? data[data.length - 2] : nu
     {/* Header Section - Stacked on mobile, row on larger screens */}
     <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white">Hola, Alex</h1>
+            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white">Hola, {userName}</h1>
             <p class="text-gray-500 mt-1 text-sm sm:text-base">Aquí puedes ver tu progreso semanal.</p>
         </div>
         <a href="/register" class="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-2.5 px-5 rounded-lg flex items-center justify-center transition-colors shadow-lg shadow-emerald-500/20">

@@ -44,3 +44,17 @@ drizzle/meta/
 
 # Tauri generated schemas
 src-tauri/gen/
+
+# Cursor IDE local files
+.cursor/plans/
+.cursor/prompts/
+
+# pnpm store
+.pnpm-store/
+
+# Backup files
+*.bak
+
+# Local data files
+src/data/*.csv
+src/data/*.bak

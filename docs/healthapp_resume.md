@@ -4,7 +4,7 @@ Este documento sirve como contexto técnico y funcional para un LLM, detallando 
 
 ## 1. Resumen del Proyecto
 
-**HealthDashboard** es una aplicación web diseñada para el seguimiento y visualización de métricas de composición corporal. Permite a un usuario ("Alex" según el código) registrar, visualizar y analizar su progreso físico a lo largo del tiempo, basándose en datos detallados (probablemente de una báscula de bioimpedancia).
+**HealthDashboard** es una aplicación web diseñada para el seguimiento y visualización de métricas de composición corporal. Permite a un usuario registrar, visualizar y analizar su progreso físico a lo largo del tiempo, basándose en datos detallados (probablemente de una báscula de bioimpedancia). El nombre del usuario es configurable desde la página de Configuración.
 
 ### Características Principales
 - **Dashboard Principal:** Visualización de métricas clave (Peso, % Grasa, Masa Muscular) con indicadores de tendencia (deltas absolutos) y gráficas de área.
