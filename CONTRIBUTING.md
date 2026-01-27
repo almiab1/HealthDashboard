@@ -1,102 +1,102 @@
-# Guía de Contribución
+# Contributing Guide
 
-Este proyecto utiliza el flujo de trabajo **GitFlow** para gestionar el desarrollo.
+This project uses the **GitFlow** workflow to manage development.
 
-## Estructura de Ramas
+## Branch Structure
 
-### Ramas Principales
+### Main Branches
 
-| Rama | Propósito |
+| Branch | Purpose |
 |------|-----------|
-| `main` | Código en producción, siempre estable |
-| `develop` | Rama de integración para desarrollo |
+| `main` | Production code, always stable |
+| `develop` | Integration branch for development |
 
-### Ramas de Soporte
+### Supporting Branches
 
-| Prefijo | Propósito | Se crea desde | Se fusiona a |
+| Prefix | Purpose | Created from | Merged to |
 |---------|-----------|---------------|--------------|
-| `feature/*` | Nuevas funcionalidades | develop | develop |
-| `release/*` | Preparar nueva versión | develop | main + develop |
-| `hotfix/*` | Corrección urgente en producción | main | main + develop |
+| `feature/*` | New features | develop | develop |
+| `release/*` | Prepare new version | develop | main + develop |
+| `hotfix/*` | Urgent production fix | main | main + develop |
 
-## Flujo de Trabajo
+## Workflow
 
-### Crear una nueva funcionalidad
+### Create a new feature
 
 ```bash
-# Desde develop, crear rama de feature
+# From develop, create feature branch
 git checkout develop
-git checkout -b feature/nombre-funcionalidad
+git checkout -b feature/feature-name
 
-# Trabajar en la funcionalidad...
-# Hacer commits con mensajes descriptivos
+# Work on the feature...
+# Make commits with descriptive messages
 
-# Cuando esté lista, fusionar a develop
+# When ready, merge to develop
 git checkout develop
-git merge --no-ff feature/nombre-funcionalidad
-git branch -d feature/nombre-funcionalidad
+git merge --no-ff feature/feature-name
+git branch -d feature/feature-name
 git push origin develop
 ```
 
-### Preparar un release
+### Prepare a release
 
 ```bash
-# Desde develop, crear rama de release
+# From develop, create release branch
 git checkout develop
 git checkout -b release/1.0.0
 
-# Hacer ajustes finales (bump version, changelog, etc.)
+# Make final adjustments (bump version, changelog, etc.)
 
-# Fusionar a main y taggear
+# Merge to main and tag
 git checkout main
 git merge --no-ff release/1.0.0
 git tag -a v1.0.0 -m "Version 1.0.0"
 
-# Fusionar también a develop
+# Also merge to develop
 git checkout develop
 git merge --no-ff release/1.0.0
 
-# Limpiar
+# Clean up
 git branch -d release/1.0.0
 git push origin main develop --tags
 ```
 
-### Crear un hotfix
+### Create a hotfix
 
 ```bash
-# Desde main, crear rama de hotfix
+# From main, create hotfix branch
 git checkout main
-git checkout -b hotfix/descripcion-fix
+git checkout -b hotfix/fix-description
 
-# Corregir el problema...
+# Fix the problem...
 
-# Fusionar a main y taggear
+# Merge to main and tag
 git checkout main
-git merge --no-ff hotfix/descripcion-fix
+git merge --no-ff hotfix/fix-description
 git tag -a v1.0.1 -m "Hotfix 1.0.1"
 
-# Fusionar también a develop
+# Also merge to develop
 git checkout develop
-git merge --no-ff hotfix/descripcion-fix
+git merge --no-ff hotfix/fix-description
 
-# Limpiar
-git branch -d hotfix/descripcion-fix
+# Clean up
+git branch -d hotfix/fix-description
 git push origin main develop --tags
 ```
 
-## Convenciones de Commits
+## Commit Conventions
 
-Usamos [Conventional Commits](https://www.conventionalcommits.org/):
+We use [Conventional Commits](https://www.conventionalcommits.org/):
 
-- `feat:` Nueva funcionalidad
-- `fix:` Corrección de bug
-- `docs:` Cambios en documentación
-- `style:` Cambios de formato (no afectan código)
-- `refactor:` Refactorización de código
-- `test:` Añadir o modificar tests
-- `chore:` Tareas de mantenimiento
+- `feat:` New feature
+- `fix:` Bug fix
+- `docs:` Documentation changes
+- `style:` Formatting changes (don't affect code)
+- `refactor:` Code refactoring
+- `test:` Add or modify tests
+- `chore:` Maintenance tasks
 
-**Ejemplos:**
+**Examples:**
 ```
 feat: add user authentication
 fix: resolve login redirect issue
@@ -106,8 +106,8 @@ refactor: simplify data processing logic
 
 ## Pull Requests
 
-1. Crea tu rama desde `develop` (o `main` para hotfixes)
-2. Asegúrate de que el código compile sin errores
-3. Describe claramente los cambios en el PR
-4. Solicita revisión de código
-5. Una vez aprobado, fusiona usando "Squash and merge" o "Merge commit"
+1. Create your branch from `develop` (or `main` for hotfixes)
+2. Ensure the code compiles without errors
+3. Clearly describe the changes in the PR
+4. Request code review
+5. Once approved, merge using "Squash and merge" or "Merge commit"

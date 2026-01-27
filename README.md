@@ -1,99 +1,99 @@
 # HealthDashboard
 
-HealthDashboard es una aplicación web moderna diseñada para el seguimiento y visualización de métricas de composición corporal. Permite registrar, visualizar y analizar el progreso físico a lo largo del tiempo, basándose en datos detallados como peso, grasa corporal, masa muscular, entre otros.
+HealthDashboard is a modern web application designed for tracking and visualizing body composition metrics. It allows you to record, visualize, and analyze physical progress over time, based on detailed data such as weight, body fat, muscle mass, and more.
 
-## 🚀 Características
+## 🚀 Features
 
-- **Dashboard Principal**: Visualización rápida de métricas clave con indicadores de tendencia y gráficas de área.
-- **Registro de Datos**: Interfaz sencilla para ingresar nuevas mediciones corporales.
-- **Historial Detallado**: Tabla completa de registros con opciones de filtrado, ordenamiento y edición.
-- **Persistencia de Datos**: Almacenamiento seguro en base de datos MySQL.
-- **Análisis Temporal**: Filtrado dinámico por rangos de fecha (30 días, 3 meses, 6 meses, 1 año, Todo o personalizado).
+- **Main Dashboard**: Quick visualization of key metrics with trend indicators and area charts.
+- **Data Registration**: Simple interface to enter new body measurements.
+- **Detailed History**: Complete table of records with filtering, sorting, and editing options.
+- **Data Persistence**: Secure storage in MySQL database.
+- **Temporal Analysis**: Dynamic filtering by date ranges (30 days, 3 months, 6 months, 1 year, All, or custom).
 
-## 🛠 Stack Tecnológico
+## 🛠 Tech Stack
 
-- **Framework**: [Astro 5](https://astro.build) (SSR con Node.js Adapter)
+- **Framework**: [Astro 5](https://astro.build) (SSR with Node.js Adapter)
 - **UI Library**: [React 19](https://react.dev)
-- **Estilos**: [Tailwind CSS 4](https://tailwindcss.com)
-- **Base de Datos**: MySQL 8.0
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com)
+- **Database**: MySQL 8.0
 - **ORM**: [Drizzle ORM](https://orm.drizzle.team)
-- **Gráficos**: Recharts
-- **Estado Global**: Zustand
-- **Iconos**: Lucide React
+- **Charts**: Recharts
+- **Global State**: Zustand
+- **Icons**: Lucide React
 
-## 📦 Instalación y Configuración
+## 📦 Installation and Setup
 
-### Prerrequisitos
+### Prerequisites
 
 - Node.js 20+
-- Docker y Docker Compose (para la base de datos)
+- Docker and Docker Compose (for the database)
 
-### Pasos
+### Steps
 
-1. **Clonar el repositorio e instalar dependencias:**
+1. **Clone the repository and install dependencies:**
 
    ```bash
    npm install
    ```
 
-2. **Configurar las variables de entorno:**
+2. **Configure environment variables:**
 
-   Crea un archivo `.env` en la raíz del proyecto basado en la configuración de base de datos. Ejemplo:
+   Create a `.env` file in the project root based on the database configuration. Example:
 
    ```env
    DATABASE_URL="mysql://user:password@localhost:3306/health_dashboard"
    ```
 
-3. **Iniciar la base de datos con Docker:**
+3. **Start the database with Docker:**
 
    ```bash
    docker-compose up -d
    ```
 
-4. **Ejecutar migraciones de base de datos:**
+4. **Run database migrations:**
 
-   Prepara y aplica el esquema de la base de datos:
+   Prepare and apply the database schema:
 
    ```bash
    npm run db:generate
    npm run db:migrate
    ```
 
-5. **Iniciar el servidor de desarrollo:**
+5. **Start the development server:**
 
    ```bash
    npm run dev
    ```
 
-   La aplicación estará disponible en `http://localhost:4321`.
+   The application will be available at `http://localhost:4321`.
 
-## 🧞 Comandos Disponibles
+## 🧞 Available Commands
 
-| Comando             | Acción                                                 |
+| Command             | Action                                                 |
 | :------------------ | :----------------------------------------------------- |
-| `npm run dev`       | Inicia el servidor de desarrollo local.                |
-| `npm run build`     | Construye la aplicación para producción.               |
-| `npm run preview`   | Vista previa de la build de producción.                |
-| `npm run db:generate`| Genera migraciones de Drizzle basadas en el esquema.  |
-| `npm run db:migrate` | Aplica las migraciones a la base de datos.            |
-| `npm run db:studio`  | Abre Drizzle Studio para explorar la BD visualmente.  |
+| `npm run dev`       | Starts local development server.                |
+| `npm run build`     | Build the application for production.               |
+| `npm run preview`   | Preview the production build.                |
+| `npm run db:generate`| Generate Drizzle migrations based on the schema.  |
+| `npm run db:migrate` | Apply migrations to the database.            |
+| `npm run db:studio`  | Open Drizzle Studio to explore the DB visually.  |
 
-## 📂 Estructura del Proyecto
+## 📂 Project Structure
 
 ```text
 src/
-├── components/         # Componentes UI (React y Astro)
-│   ├── charts/         # Gráficos (Recharts)
-│   ├── dashboard/      # Widgets del dashboard
-│   ├── history/        # Tablas y vistas históricas
-│   └── ui/             # Componentes base reutilizables
-├── db/                 # Configuración de BD y Schema Drizzle
-├── layouts/            # Layouts principales de Astro
-├── pages/              # Rutas y Endpoints API
-├── stores/             # Estado global (Zustand)
-└── utils/              # Lógica de negocio y transformadores
+├── components/         # UI Components (React and Astro)
+│   ├── charts/         # Charts (Recharts)
+│   ├── dashboard/      # Dashboard widgets
+│   ├── history/        # Historical tables and views
+│   └── ui/             # Reusable base components
+├── db/                 # DB configuration and Drizzle Schema
+├── layouts/            # Main Astro layouts
+├── pages/              # Routes and API Endpoints
+├── stores/             # Global state (Zustand)
+└── utils/              # Business logic and transformers
 ```
 
-## 📄 Licencia
+## 📄 License
 
-Este proyecto es de uso personal y educativo.
+This project is for personal and educational use.
