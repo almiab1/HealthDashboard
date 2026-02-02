@@ -34,7 +34,11 @@ jobs:
           version: 8
 
       - name: Install Rust stable
-        uses: dtolnay/rust-action@stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
 
       - name: Install dependencies (Ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
