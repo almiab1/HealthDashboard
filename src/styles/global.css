@@ -73,3 +73,9 @@
     font-family: 'Inter', sans-serif;
   }
 }
+
+@layer utilities {
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500/50 focus-visible:border-emerald-500;
+  }
+}

@@ -4,117 +4,132 @@ This document serves as technical and functional context for an LLM, detailing t
 
 ## 1. Project Summary
 
-**HealthDashboard** is a web application designed for tracking and visualizing body composition metrics. It allows a user to register, visualize, and analyze their physical progress over time, based on detailed data (probably from a bioimpedance scale). The user's name is configurable from the Settings page.
+**HealthDashboard** is a dual-target (web + desktop) application for tracking and visualizing body composition metrics. It allows a user to register, visualize, and analyze their physical progress over time, based on detailed bioimpedance data (Tanita MC-780MA or similar).
 
 ### Main Features
-- **Main Dashboard:** Visualization of key metrics (Weight, % Fat, Muscle Mass) with trend indicators (absolute deltas) and area charts.
-- **Data Management:** Persistent storage in **MySQL** database using **Drizzle ORM**.
-- **Measurement Registration:** Form to enter new data that is saved to the database.
-- **History:** Detailed table of previous records with date filtering capabilities, sorting, and edit/delete actions.
-- **Filtering:** Ability to filter data by predefined or custom ranges (global state management with Zustand).
+- **Main Dashboard:** Key metrics (Weight, % Fat, Muscle Mass) with trend indicators and area charts in a side-by-side layout (charts left, recent table right).
+- **Data Management:** Persistent storage in MySQL (web) or embedded SQLite (desktop) with a unified abstraction layer.
+- **Measurement Registration:** Form to enter new data, saved through the runtime-aware database layer.
+- **History:** Detailed table of records with date filtering, sorting, and edit/delete actions.
+- **Settings:** User profile (username), record statistics, and CSV export.
+- **Guide:** 12 detailed metric explanation cards with icons, definitions, and interpretation guidance.
+- **Filtering:** Predefined or custom date ranges (global state with Zustand).
+- **CSV Export:** Browser download (web) or native save dialog (desktop via Tauri).
 
 ## 2. Tech Stack
 
-The application uses a modern architecture based on **Astro** with islands of interactivity in **React**.
+The application uses a dual-mode architecture based on **Astro** with interactive React islands.
 
-- **Core Framework:** [Astro v5.16](https://astro.build) (Rendering: SSR with Node Adapter).
+- **Core Framework:** [Astro v5](https://astro.build) — SSR (web) or static (desktop).
 - **UI Framework:** [React v19](https://react.dev).
-- **Styling:** [Tailwind CSS v4](https://tailwindcss.com) (with `@tailwindcss/vite`).
+- **Styling:** [Tailwind CSS v4](https://tailwindcss.com) with CVA for component variants.
 - **Icons:** `lucide-react`.
-- **Data Visualization:** `recharts` for charts.
-- **Global State:** `zustand` (used for date filters).
-- **Backend/Runtime:** Node.js.
-- **Persistence:** MySQL (database manager) + Drizzle ORM (abstraction layer).
+- **Data Visualization:** `recharts` for area charts.
+- **Global State:** `zustand` (date filter store).
+- **Notifications:** `sonner` (toast notifications).
+- **Web Backend:** Node.js via `@astrojs/node`, MySQL via Drizzle ORM.
+- **Desktop Backend:** Tauri 2 (Rust), SQLite via `rusqlite`.
+- **Package Manager:** pnpm 10.28.2 (enforced).
 
 ## 3. Project Structure
 
 ```text
 src/
 ├── components/         # UI Components (React and Astro)
-│   ├── charts/         # Charts (Recharts)
-│   ├── dashboard/      # Dashboard widgets (MetricCard, DateFilter, RecentTable)
-│   ├── history/        # Historical view components (HistoryTable)
-│   ├── register/       # Registration forms (RegisterForm)
-│   └── ui/             # Base components
-├── db/                 # Database Layer
+│   ├── dashboard/      # MetricCard, DateFilter, DashboardDesktop, RecentTable
+│   ├── history/        # HistoryTable, HistoryDesktop
+│   ├── register/       # RegisterForm
+│   ├── settings/       # SettingsForm, SettingsDesktop
+│   ├── layout/         # Navbar
+│   └── ui/             # Button, Card, Table, Tooltip, DownloadButton
+├── db/                 # Database Layer (web only)
 │   ├── client.ts       # Drizzle/MySQL connection client
 │   └── schema.ts       # Database schema definition
-├── layouts/            # Page layouts (MainLayout)
-├── pages/              # Application routes
-│   ├── api/            # API Endpoints (records, records/[id])
-│   ├── index.astro     # Main dashboard
-│   ├── history.astro   # Complete historical view
-│   └── register.astro  # Data registration page
-├── stores/             # Global state (Zustand - useDateFilterStore)
-└── utils/              # Business logic and processing
-    ├── dataProcessor.ts # Data transformers DB <-> UI
-    └── data.ts          # Type and interface definitions
+├── lib/
+│   └── database.ts     # Runtime abstraction (web API ↔ Tauri IPC)
+├── layouts/            # MainLayout (shared)
+├── pages/              # Web routes (SSR)
+│   ├── api/            # REST endpoints (records, records/[id], settings)
+│   ├── index.astro     # Dashboard
+│   ├── register.astro  # Registration form
+│   ├── history.astro   # Historical view
+│   ├── settings.astro  # Settings + export
+│   └── guia.astro      # Metrics guide
+├── pages-desktop/      # Desktop routes (static, client:only)
+│   ├── index.astro     # Dashboard
+│   ├── register.astro  # Registration form
+│   ├── history.astro   # Historical view
+│   ├── settings.astro  # Settings + export
+│   └── guia.astro      # Metrics guide
+├── stores/             # Zustand (useDateFilterStore)
+└── utils/              # Data interfaces, processing, CSV export, settings helpers
+
+src-tauri/
+├── src/lib.rs          # Rust backend: SQLite CRUD + Tauri IPC commands
+├── tauri.conf.json     # Tauri app configuration
+└── Cargo.toml          # Rust dependencies
 ```
 
 ## 4. Data Model
 
-The application has migrated from CSV files to a MySQL relational database.
+### Database Schema (`body_metrics`)
 
-### Database Schema (`src/db/schema.ts`)
-The `body_metrics` table defines the storage structure:
+16 columns of body composition data plus metadata:
 
-```typescript
-export const bodyMetrics = mysqlTable('body_metrics', {
-  id: int('id').autoincrement().primaryKey(),
-  userId: int('user_id').default(1),
-  recordedAt: date('recorded_at').notNull(),
-  
-  // Main Metrics
-  weight: decimal('weight', { precision: 5, scale: 2 }).notNull(),
-  bmi: decimal('bmi', { precision: 4, scale: 1 }),
-  fatMassKg: decimal('fat_mass_kg', { precision: 5, scale: 2 }),
-  fatMassPercent: decimal('fat_mass_percent', { precision: 4, scale: 1 }),
-  muscleMassKg: decimal('muscle_mass_kg', { precision: 5, scale: 2 }),
-  freeMassKg: decimal('free_mass_kg', { precision: 5, scale: 2 }),
-  
-  // Composition Metrics
-  waterKg: decimal('water_kg', { precision: 5, scale: 2 }),
-  waterPercent: decimal('water_percent', { precision: 4, scale: 1 }),
-  boneMassKg: decimal('bone_mass_kg', { precision: 4, scale: 2 }),
-  visceralFat: decimal('visceral_fat', { precision: 4, scale: 1 }),
-  
-  // Metabolism
-  bmr: decimal('bmr', { precision: 6, scale: 2 }),
-  metabolicAge: tinyint('metabolic_age'),
-  
-  // Bioimpedance (Advanced)
-  phaseAngle: decimal('phase_angle', { precision: 4, scale: 2 }),
-  resistance: decimal('resistance', { precision: 6, scale: 2 }),
-  reactance: decimal('reactance', { precision: 6, scale: 2 }),
-  
-  createdAt: timestamp('created_at').defaultNow()
-});
-```
+| Field | Description |
+|-------|-------------|
+| `weight` | Body weight (kg) |
+| `bmi` | Body Mass Index |
+| `fat_mass_kg` / `fat_mass_percent` | Fat mass in kg and percentage |
+| `muscle_mass_kg` | Skeletal + smooth muscle mass |
+| `free_mass_kg` | Fat-free mass (muscle + bone + water + organs) |
+| `water_kg` / `water_percent` | Total body water |
+| `bone_mass_kg` | Bone mineral mass |
+| `visceral_fat` | Visceral fat index (1-59 scale) |
+| `bmr` | Basal Metabolic Rate (kcal) |
+| `metabolic_age` | Metabolic age comparison |
+| `phase_angle` | Cellular health indicator (degrees) |
+| `resistance` / `reactance` | Bioimpedance raw values |
+
+### Settings (`app_settings`)
+
+Key-value store for user preferences. Currently stores `userName`.
 
 ### Internal Interface (`RegistroCorporal`)
-The data processor transforms DB records to a TypeScript interface used in the frontend (UI), mapping DB column names to PascalCase properties (e.g., `recordedAt` -> `Fecha`, `fatMassKg` -> `GrasaKg`).
+
+The data processor transforms DB records to a TypeScript interface mapping column names to PascalCase properties (e.g., `recorded_at` → `Fecha`, `fat_mass_kg` → `GrasaKg`).
 
 ## 5. Main Business Logic
 
+### Runtime Abstraction (`src/lib/database.ts`)
+
+All data operations pass through this module, which auto-detects the runtime:
+- **Web:** Routes to `/api/records` and `/api/settings` endpoints
+- **Desktop:** Invokes Tauri IPC commands (`create_record`, `get_setting`, etc.)
+
+Functions: `createRecord()`, `updateRecord()`, `deleteRecord()`, `getAllRecords()`, `getSetting()`, `setSetting()`, `getAllSettings()`
+
 ### Data Processing (`src/utils/dataProcessor.ts`)
-1.  **Reading:** `select` queries are performed on the database using Drizzle ORM.
-2.  **Mapping:** The `mapDbRecordToUi` function converts the object returned by Drizzle to the `RegistroCorporal` interface used by React components.
-3.  **Delta Calculation:**
-    *   The `getLastRecordWithDelta()` function retrieves the last and second-to-last records ordered by date.
-    *   Calculates the **absolute difference** (Current Value - Previous Value) to display in metric cards.
+1. **Reading:** Drizzle ORM queries (web) or Tauri IPC (desktop)
+2. **Mapping:** `mapDbRecordToUi` converts DB records to `RegistroCorporal`
+3. **Delta Calculation:** `getLastRecordWithDelta()` computes absolute differences between last two records
 
-### API (`src/pages/api/records`)
-*   **GET / DELETE / POST:** Handled through Astro endpoints that interact with the MySQL database.
-*   **Validation:** Incoming data is validated before inserting or updating in the database.
+### API Endpoints (web only, `src/pages/api/`)
+- `POST /api/records` — Create record
+- `PUT /api/records/[id]` — Update record
+- `DELETE /api/records/[id]` — Delete record
+- `GET /api/settings?key=NAME` — Get setting
+- `PUT /api/settings` — Upsert setting
 
-### Visualization
-*   **MetricCard:** Displays the current value, unit, and difference from the previous period.
-    *   Shows the absolute change (e.g., `-0.5 kg`) instead of percentage.
-    *   Trend colors: Green for positive changes (or negative if `inverseTrend` is true, as in weight/fat).
-*   **Date Filters:** `DateFilter` component integrated in the dashboard header, with tab-style for quick selection (30 days, 3 months, etc.) or custom range.
+### CSV Export (`src/utils/export.ts`)
+- Generates CSV with Spanish headers
+- Web: triggers browser download via Blob URL
+- Desktop: opens native save dialog via `tauri-plugin-dialog`, writes file via `save_csv_file` IPC command
 
 ## 6. Development Considerations
 
-*   **Rendering:** Most pages use SSR. Components like `DateFilter`, `MetricCard`, and `HistoryTable` are interactive islands (`client:load`).
-*   **Database:** A running MySQL instance is required (configured in `.env`). Migrations are handled with Drizzle Kit.
-*   **Styling:** Consistent dark design with Tailwind CSS.
+- **Rendering:** Web pages use SSR (`client:load` for interactive islands). Desktop pages use static rendering (`client:only="react"` — all data loading happens client-side).
+- **Database:** Web requires a running MySQL instance (`.env` → `DATABASE_URL`). Desktop auto-initializes SQLite on first launch.
+- **Build:** Desktop build requires a page-swap step (`scripts/build-desktop.sh`) that temporarily replaces `src/pages/` with `src/pages-desktop/`.
+- **Styling:** Dark theme with emerald accents, consistent across both targets.
+- **Localization:** All UI text is in Spanish (es-ES).

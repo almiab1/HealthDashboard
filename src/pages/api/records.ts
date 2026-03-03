@@ -50,9 +50,10 @@ export const POST: APIRoute = async ({ request }) => {
     );
 
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error al guardar el registro:', error);
     return new Response(
-      JSON.stringify({ error: 'Error al procesar la solicitud' }),
+      JSON.stringify({ error: `Error al guardar el registro: ${message}` }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }

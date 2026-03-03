@@ -71,7 +71,16 @@ fn init_database() -> Result<Connection, String> {
         )",
         [],
     ).map_err(|e| format!("Error creando tabla: {}", e))?;
-    
+
+    // Crear tabla de configuraciones si no existe
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY NOT NULL,
+            value TEXT NOT NULL
+        )",
+        [],
+    ).map_err(|e| format!("Error creando tabla app_settings: {}", e))?;
+
     Ok(conn)
 }
 
@@ -207,6 +216,65 @@ fn save_csv_file(content: String, filename: String) -> Result<String, String> {
     Ok(filename)
 }
 
+// Estructura para configuraciones
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AppSetting {
+    pub key: String,
+    pub value: String,
+}
+
+// Comando: Obtener una configuración por clave
+#[tauri::command]
+fn get_setting(db: State<DbConnection>, key: String) -> Result<Option<String>, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+
+    let mut stmt = conn.prepare(
+        "SELECT value FROM app_settings WHERE key = ?1"
+    ).map_err(|e| e.to_string())?;
+
+    let mut rows = stmt.query(params![key]).map_err(|e| e.to_string())?;
+
+    if let Some(row) = rows.next().map_err(|e| e.to_string())? {
+        let value: String = row.get(0).map_err(|e| e.to_string())?;
+        Ok(Some(value))
+    } else {
+        Ok(None)
+    }
+}
+
+// Comando: Guardar o actualizar una configuración
+#[tauri::command]
+fn set_setting(db: State<DbConnection>, key: String, value: String) -> Result<(), String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+
+    conn.execute(
+        "INSERT INTO app_settings (key, value) VALUES (?1, ?2)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        params![key, value],
+    ).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+// Comando: Obtener todas las configuraciones
+#[tauri::command]
+fn get_all_settings(db: State<DbConnection>) -> Result<Vec<AppSetting>, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+
+    let mut stmt = conn.prepare(
+        "SELECT key, value FROM app_settings"
+    ).map_err(|e| e.to_string())?;
+
+    let settings = stmt.query_map([], |row| {
+        Ok(AppSetting {
+            key: row.get(0)?,
+            value: row.get(1)?,
+        })
+    }).map_err(|e| e.to_string())?;
+
+    settings.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
+}
+
 // Comando: Obtener un registro por ID
 #[tauri::command]
 fn get_record_by_id(db: State<DbConnection>, id: i64) -> Result<Option<BodyMetric>, String> {
@@ -261,7 +329,10 @@ pub fn run() {
             update_record,
             delete_record,
             get_record_by_id,
-            save_csv_file
+            save_csv_file,
+            get_setting,
+            set_setting,
+            get_all_settings
         ])
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {

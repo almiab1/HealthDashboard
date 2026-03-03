@@ -1,196 +1,22 @@
 ---
 import MainLayout from '@/layouts/MainLayout.astro';
-import { 
-    Scale, 
-    Activity, 
-    Droplets, 
-    Bone, 
-    Zap, 
-    Heart, 
-    TrendingUp, 
-    Brain, 
-    Dumbbell, 
-    Ruler 
-} from 'lucide-react';
-
-const metrics = [
-    {
-        title: "1. Peso (kg)",
-        icon: Scale,
-        whatIs: "La suma total de todos los componentes de tu cuerpo (huesos, músculos, grasa, agua, órganos, etc.).",
-        interpretation: "Por sí solo, el peso es un indicador pobre de salud. Bajar de peso no siempre es bueno (si pierdes músculo) y subir no siempre es malo (si ganas músculo).",
-        points: [
-            { type: "good", text: "Si el peso baja a expensas de la grasa." },
-            { type: "bad", text: "Si el peso baja a expensas del músculo o agua (deshidratación)." }
-        ]
-    },
-    {
-        title: "2. Masa Grasa (kg y %)",
-        icon: Activity,
-        whatIs: "La cantidad total de tejido adiposo en el cuerpo.",
-        interpretation: "Es el indicador más importante para la salud metabólica.",
-        details: [
-            "Rango Saludable (Hombres 20-39 años): 8% - 20%.",
-            "Sobrepeso/Obesidad: Por encima del 20-25%.",
-            "Tu estado: Actualmente estás rondando el 23-24%. Estás en un proceso de descenso, acercándote al rango saludable. Bajar este porcentaje es el objetivo principal."
-        ]
-    },
-    {
-        title: "3. Masa Muscular (kg)",
-        icon: Dumbbell,
-        whatIs: "El peso de tus músculos esqueléticos (los que usas para moverte) y lisos (corazón, sistema digestivo), incluyendo el agua que contienen.",
-        interpretation: "El motor de tu cuerpo. El músculo quema calorías incluso en reposo.",
-        points: [
-            { type: "good", text: "Mantener o aumentar este valor. Perder peso sin perder músculo es el éxito de una dieta." },
-            { type: "alert", text: "Si este valor baja drásticamente, tu metabolismo se ralentizará y será más fácil sufrir el 'efecto rebote'." }
-        ]
-    },
-    {
-        title: "4. Masa Libre de Grasa (kg)",
-        icon: Activity,
-        whatIs: "Todo lo que no es grasa: Músculo + Hueso + Agua + Órganos.",
-        interpretation: "Es un indicador de tu constitución 'útil'. Cuanto más alto sea este número en relación a tu peso total, más fuerte y saludable es tu metabolismo."
-    },
-    {
-        title: "5. Agua Corporal Total (kg y %)",
-        icon: Droplets,
-        whatIs: "La cantidad de fluidos en tu cuerpo.",
-        interpretation: "Estar bien hidratado ayuda a metabolizar la grasa y construir músculo.",
-        details: [
-            "Rango Saludable (Hombres): 50% - 65%.",
-            "Tus valores están alrededor del 53%, lo cual es correcto/normal.",
-            "Si bajara del 50%, indicarías deshidratación o retención de líquidos (paradojicamente, a veces retenemos agua fuera de las células pero estamos deshidratados dentro)."
-        ]
-    },
-    {
-        title: "6. Mineral Óseo (kg)",
-        icon: Bone,
-        whatIs: "El peso de los minerales óseos (calcio, etc.) en tu estructura.",
-        interpretation: "Indica la fortaleza de tus huesos.",
-        details: [
-            "Referencia: Para tu peso, un valor en torno a 3.2 - 3.6 kg es normal.",
-            "Tu estado: Tienes 3.5 - 3.6 kg, lo que indica una buena densidad ósea. El ejercicio de fuerza ayuda a mantener esto alto."
-        ]
-    },
-    {
-        title: "7. Proteínas (kg)",
-        icon: Dumbbell,
-        whatIs: "La cantidad de proteína almacenada en el cuerpo (principalmente en los músculos).",
-        interpretation: "Un nivel adecuado indica una buena nutrición y masa muscular sana.",
-        points: [
-            { type: "good", text: "Un nivel adecuado indica una buena nutrición y masa muscular sana." },
-            { type: "bad", text: "Un nivel bajo podría indicar desnutrición o falta de ingesta proteica. Tus niveles (~17.5 kg) son saludables y acordes a tu masa muscular." }
-        ]
-    },
-    {
-        title: "8. IMC (Índice de Masa Corporal)",
-        icon: Ruler,
-        whatIs: "Una relación simple entre peso y altura (Peso / Altura²).",
-        interpretation: "< 18.5: Bajo peso | 18.5 - 24.9: Peso normal | 25.0 - 29.9: Sobrepeso | > 30.0: Obesidad.",
-        details: [
-            "Limitación: El IMC no distingue entre grasa y músculo.",
-            "Un culturista puede tener un IMC de 'obesidad' sin tener grasa. En tu caso, al tener buena musculatura, el IMC puede salir 'Sobrepeso' (27.4), pero es más importante mirar el % de Grasa."
-        ]
-    },
-    {
-        title: "9. Grasa Visceral (Índice)",
-        icon: Heart,
-        whatIs: "La grasa que rodea los órganos vitales en la zona abdominal. Es la grasa 'peligrosa' asociada a diabetes, hipertensión y problemas cardíacos.",
-        interpretation: "Escala 1-59. 1-12 es Saludable. 13-59 es Excesivo.",
-        details: [
-            "Tu estado: Tienes un índice de 7. Esto es excelente.",
-            "Indica que, aunque tengas algo de grasa corporal extra (subcutánea), tus órganos están sanos y libres de grasa peligrosa."
-        ]
-    },
-    {
-        title: "10. Edad Metabólica",
-        icon: Activity,
-        whatIs: "Compara tu Tasa Metabólica Basal con la media de tu grupo de edad.",
-        interpretation: "Si es menor o igual a tu edad real es bueno. Si es mayor, indica metabolismo lento.",
-        details: [
-            "Tu estado: Ha bajado a 40 años (tienes 26). Esto indica que hay margen de mejora.",
-            "Al ganar músculo y perder grasa, esta 'edad' bajará y se acercará a la tuya real."
-        ]
-    },
-    {
-        title: "11. Metabolismo Basal (kcal)",
-        icon: Zap,
-        whatIs: "La energía (calorías) que tu cuerpo quema solo por estar vivo en 24 horas, sin contar ejercicio.",
-        interpretation: "Cuanto más alto, mejor: Significa que tienes un motor potente que quema grasa fácilmente.",
-        details: [
-            "Relación con el músculo: El músculo consume muchas calorías. Si ganas músculo, este número sube.",
-            "Tus ~2100 kcal son un número bastante alto y bueno, gracias a tu altura y estructura."
-        ]
-    },
-    {
-        title: "12. Ángulo de Fase (°)",
-        icon: TrendingUp,
-        whatIs: "Un indicador de la salud celular y la integridad de la membrana celular. Es como una 'nota de calidad' de tus tejidos.",
-        interpretation: "Bajo (< 5°): Desnutrición/Inflamación. Normal (5° - 7°): Estándar. Alto (> 7°): Células muy sanas.",
-        details: [
-            "Tu estado: Tienes 7.9°. Este es un valor extraordinario.",
-            "Indica que, a nivel celular, tu cuerpo está muy fuerte y nutrido. Es tu mejor indicador de salud estructural."
-        ]
-    }
-];
+import { GuideCards } from '@/components/guide/GuideCards';
 ---
 
-<MainLayout title="Guía de Interpretación | NutriTrack">
+<MainLayout title="Guia de Interpretacion | NutriTrack">
     <div class="max-w-5xl mx-auto pb-12 space-y-8">
-        
+
         {/* Header */}
         <div class="space-y-4 border-b border-[#1e3327] pb-6">
-            <h1 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Guía de Interpretación</h1>
+            <h1 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Guia de Interpretacion</h1>
             <p class="text-gray-400 text-lg leading-relaxed max-w-3xl">
-                Esta guía te ayudará a entender cada uno de los campos de tus informes de bioimpedancia (Tanita MC-780MA), 
-                qué indican sobre tu salud y cómo interpretar tu progreso.
+                Esta guia te ayudara a entender cada uno de los campos de tus informes de bioimpedancia (Tanita MC-780MA),
+                que indican sobre tu salud y como interpretar tu progreso.
             </p>
         </div>
 
-        {/* Grid de Métricas */}
-        <div class="grid gap-6 md:grid-cols-2">
-            {metrics.map((metric) => (
-                <div class="bg-[#111c16] border border-[#1e3327] rounded-xl p-6 hover:border-emerald-500/30 transition-colors">
-                    <div class="flex items-start gap-4">
-                        <div class="bg-[#1a2e22] p-3 rounded-lg">
-                            <metric.icon className="h-6 w-6 text-emerald-400" />
-                        </div>
-                        <div class="space-y-3 flex-1">
-                            <h3 class="text-xl font-bold text-white">{metric.title}</h3>
-                            
-                            <div class="space-y-2">
-                                <div>
-                                    <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">¿Qué es?</span>
-                                    <p class="text-gray-300 text-sm leading-relaxed mt-1">{metric.whatIs}</p>
-                                </div>
-                                
-                                <div>
-                                    <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Interpretación</span>
-                                    <p class="text-gray-300 text-sm leading-relaxed mt-1">{metric.interpretation}</p>
-                                </div>
-
-                                {(metric.points || metric.details) && (
-                                    <div class="mt-4 bg-[#0d1a12] rounded-lg p-3 space-y-2 border border-[#1e3327]">
-                                        {metric.points && metric.points.map(point => (
-                                            <div class="flex items-start gap-2 text-sm">
-                                                <span class={point.type === 'good' ? 'text-emerald-400 font-bold' : point.type === 'bad' ? 'text-red-400 font-bold' : 'text-yellow-400 font-bold'}>
-                                                    {point.type === 'good' ? 'Bueno:' : point.type === 'bad' ? 'Malo:' : 'Alerta:'}
-                                                </span>
-                                                <span class="text-gray-400">{point.text}</span>
-                                            </div>
-                                        ))}
-                                        {metric.details && metric.details.map(detail => (
-                                            <p class="text-sm text-gray-400">• {detail}</p>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            ))}
-        </div>
+        {/* Interactive Guide Cards */}
+        <GuideCards client:load />
 
     </div>
 </MainLayout>
-

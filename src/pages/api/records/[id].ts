@@ -31,9 +31,10 @@ export const DELETE: APIRoute = async ({ params }) => {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error deleting record:', error);
     return new Response(
-      JSON.stringify({ error: 'Error processing request' }),
+      JSON.stringify({ error: `Error deleting record: ${message}` }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
@@ -69,7 +70,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
       }
 
     const [day, month, year] = body.date.split('/').map(Number);
-    const recordedAt = new Date(year, month - 1, day);
+    const recordedAt = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
 
     const updateData = {
       recordedAt: recordedAt,
@@ -99,9 +100,10 @@ export const PUT: APIRoute = async ({ params, request }) => {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error updating record:', error);
     return new Response(
-      JSON.stringify({ error: 'Error processing request' }),
+      JSON.stringify({ error: `Error updating record: ${message}` }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }

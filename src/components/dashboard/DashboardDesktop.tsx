@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Loader2, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Loader2, TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
 import { MetricCard } from './MetricCard';
 import { DateFilter } from './DateFilter';
-import { getAllRecords } from '../../lib/database';
+import { getAllRecords, getSetting } from '../../lib/database';
 import type { RegistroCorporal } from '../../utils/data';
 import { MetricTooltip } from '../ui/MetricTooltip';
+import { EmptyState } from '../ui/EmptyState';
+import { MetricCardSkeleton, RecentTableSkeleton } from '../ui/Skeleton';
 
 interface DataWithDelta extends RegistroCorporal {
   delta?: {
@@ -151,10 +153,9 @@ export const DashboardDesktop: React.FC = () => {
 
   const loadUserName = async () => {
     try {
-      const response = await fetch('/api/settings?key=userName');
-      const data = await response.json();
-      if (data.value) {
-        setUserName(data.value);
+      const value = await getSetting('userName');
+      if (value) {
+        setUserName(value);
       }
     } catch (err) {
       console.error('[DashboardDesktop] Error al cargar nombre:', err);
@@ -196,9 +197,26 @@ export const DashboardDesktop: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
-        <span className="ml-3 text-gray-400">Cargando datos...</span>
+      <div className="flex flex-col h-[calc(100vh-110px)] overflow-hidden">
+        <div className="flex-shrink-0 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between mb-3">
+          <div>
+            <div className="h-8 w-48 animate-pulse rounded-md bg-[#1e3327]/60 mb-1" />
+            <div className="h-4 w-64 animate-pulse rounded-md bg-[#1e3327]/60" />
+          </div>
+        </div>
+        <div className="flex-shrink-0 mb-3">
+          <div className="h-4 w-48 animate-pulse rounded-md bg-[#1e3327]/60" />
+        </div>
+        <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-3">
+          <div className="flex-1 flex flex-col gap-2 order-2 md:order-1">
+            <div className="flex-1 min-h-[100px]"><MetricCardSkeleton /></div>
+            <div className="flex-1 min-h-[100px]"><MetricCardSkeleton /></div>
+            <div className="flex-1 min-h-[100px]"><MetricCardSkeleton /></div>
+          </div>
+          <div className="w-full md:w-[33%] flex-shrink-0 order-1 md:order-2">
+            <RecentTableSkeleton />
+          </div>
+        </div>
       </div>
     );
   }
@@ -288,9 +306,13 @@ export const DashboardDesktop: React.FC = () => {
               </div>
             </>
           ) : (
-            <div className="flex items-center justify-center h-full text-center text-gray-500 bg-[#111c16] border border-[#1e3327] rounded-xl p-8">
-              No hay registros disponibles. Empieza registrando una nueva medida.
-            </div>
+            <EmptyState
+              icon={<BarChart3 className="h-7 w-7 text-emerald-400" />}
+              title="Sin registros todavia"
+              description="Registra tu primera medicion corporal para comenzar a ver tu progreso aqui."
+              ctaLabel="Registrar Nuevas Medidas"
+              ctaHref="/register"
+            />
           )}
         </div>
 
