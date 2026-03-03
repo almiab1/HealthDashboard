@@ -1,31 +1,33 @@
-import { type RegistroCorporal } from './data';
-import { db } from '../db/client';
-import { bodyMetrics } from '../db/schema';
-import { desc, asc } from 'drizzle-orm';
+import { type RegistroCorporal } from "./data";
+import { db } from "../db/client";
+import { bodyMetrics } from "../db/schema";
+import { asc } from "drizzle-orm";
 
 export function parseDate(dateStr: string): Date {
   if (!dateStr) return new Date();
-  const [day, month, year] = dateStr.split('/').map(Number);
+  const [day, month, year] = dateStr.split("/").map(Number);
   return new Date(year, month - 1, day);
 }
 
 // Helper to convert DB record to UI interface
-function mapDbRecordToUi(record: typeof bodyMetrics.$inferSelect): RegistroCorporal {
+function mapDbRecordToUi(
+  record: typeof bodyMetrics.$inferSelect,
+): RegistroCorporal {
   // Asegurarse de que record.recordedAt se interpreta correctamente como fecha local
   let dateObj: Date;
-  
+
   if (record.recordedAt instanceof Date) {
     dateObj = record.recordedAt;
   } else {
     // Si es string, parseamos
     const dateStr = String(record.recordedAt);
-    if (dateStr.includes('T')) {
-        dateObj = new Date(dateStr);
+    if (dateStr.includes("T")) {
+      dateObj = new Date(dateStr);
     } else {
-        // Asumir YYYY-MM-DD
-        const [y, m, d] = dateStr.split('-').map(Number);
-        // Crear fecha al mediodía para evitar problemas de TZ
-        dateObj = new Date(y, m - 1, d, 12, 0, 0);
+      // Asumir YYYY-MM-DD
+      const [y, m, d] = dateStr.split("-").map(Number);
+      // Crear fecha al mediodía para evitar problemas de TZ
+      dateObj = new Date(y, m - 1, d, 12, 0, 0);
     }
   }
 
@@ -46,13 +48,16 @@ function mapDbRecordToUi(record: typeof bodyMetrics.$inferSelect): RegistroCorpo
     MasaOsea: Number(record.boneMassKg),
     AnguloFase: Number(record.phaseAngle),
     Resistencia: Number(record.resistance),
-    Reactancia: Number(record.reactance)
+    Reactancia: Number(record.reactance),
   };
 }
 
 export async function getProcessedData(): Promise<RegistroCorporal[]> {
   try {
-    const records = await db.select().from(bodyMetrics).orderBy(asc(bodyMetrics.recordedAt));
+    const records = await db
+      .select()
+      .from(bodyMetrics)
+      .orderBy(asc(bodyMetrics.recordedAt));
     return records.map(mapDbRecordToUi);
   } catch (error) {
     console.error("Error fetching data from DB:", error);
@@ -77,7 +82,7 @@ export interface DataWithDelta extends RegistroCorporal {
     AnguloFase: number;
     Resistencia: number;
     Reactancia: number;
-  }
+  };
 }
 
 export async function getLastRecordWithDelta(): Promise<DataWithDelta | null> {
@@ -100,13 +105,19 @@ export async function getLastRecordWithDelta(): Promise<DataWithDelta | null> {
       MusculoKg: Number((last.MusculoKg - previous.MusculoKg).toFixed(2)),
       AguaKg: Number((last.AguaKg - previous.AguaKg).toFixed(2)),
       AguaPorc: Number((last.AguaPorc - previous.AguaPorc).toFixed(2)),
-      MetabolismoBasal: Number((last.MetabolismoBasal - previous.MetabolismoBasal).toFixed(0)),
-      EdadMetabolica: Number((last.EdadMetabolica - previous.EdadMetabolica).toFixed(0)),
-      GrasaVisceral: Number((last.GrasaVisceral - previous.GrasaVisceral).toFixed(0)),
+      MetabolismoBasal: Number(
+        (last.MetabolismoBasal - previous.MetabolismoBasal).toFixed(0),
+      ),
+      EdadMetabolica: Number(
+        (last.EdadMetabolica - previous.EdadMetabolica).toFixed(0),
+      ),
+      GrasaVisceral: Number(
+        (last.GrasaVisceral - previous.GrasaVisceral).toFixed(0),
+      ),
       MasaOsea: Number((last.MasaOsea - previous.MasaOsea).toFixed(2)),
       AnguloFase: Number((last.AnguloFase - previous.AnguloFase).toFixed(2)),
       Resistencia: Number((last.Resistencia - previous.Resistencia).toFixed(1)),
       Reactancia: Number((last.Reactancia - previous.Reactancia).toFixed(1)),
-    }
+    },
   };
 }

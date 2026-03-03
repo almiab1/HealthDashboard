@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Save, Loader2, Check } from 'lucide-react';
+import { getSetting, setSetting } from '../../lib/database';
 
 export const SettingsForm: React.FC = () => {
   const [userName, setUserName] = useState('');
@@ -12,10 +13,9 @@ export const SettingsForm: React.FC = () => {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const response = await fetch('/api/settings?key=userName');
-        const data = await response.json();
-        if (data.value) {
-          setUserName(data.value);
+        const value = await getSetting('userName');
+        if (value) {
+          setUserName(value);
         }
       } catch (err) {
         console.error('Error al cargar configuración:', err);
@@ -34,14 +34,10 @@ export const SettingsForm: React.FC = () => {
     setError(null);
 
     try {
-      const response = await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'userName', value: userName.trim() || 'Usuario' })
-      });
+      const result = await setSetting('userName', userName.trim() || 'Usuario');
 
-      if (!response.ok) {
-        throw new Error('Error al guardar');
+      if (!result.success) {
+        throw new Error(result.error || 'Error al guardar');
       }
 
       setSaved(true);
@@ -113,7 +109,7 @@ export const SettingsForm: React.FC = () => {
               </>
             )}
           </button>
-          
+
           {saved && (
             <span className="text-emerald-400 text-sm flex items-center gap-1">
               <Check className="h-4 w-4" />

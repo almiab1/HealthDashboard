@@ -1,16 +1,17 @@
 ---
-import { Activity, Menu, LayoutDashboard, ClipboardList, BookOpen, Settings } from 'lucide-react';
+import { Activity, LayoutDashboard, ClipboardList, BookOpen, Settings } from 'lucide-react';
 
 const navItems = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard },
   { label: 'Historial', href: '/history', icon: ClipboardList },
   { label: 'Guía', href: '/guia', icon: BookOpen },
-  { label: 'Configuración', href: '/settings', icon: Settings },
+  { label: 'Config', href: '/settings', icon: Settings },
 ];
 
 const currentPath = Astro.url.pathname;
 ---
 
+{/* Top navbar */}
 <nav class="sticky top-0 z-50 border-b border-[#1e3327] bg-[#0d1a12]">
   <div class="flex h-14 items-center justify-between px-4 lg:px-8">
     {/* Logo - Always visible */}
@@ -24,38 +25,12 @@ const currentPath = Astro.url.pathname;
     {/* Navigation Links - Hidden on mobile */}
     <div class="hidden md:flex items-center gap-1">
       {navItems.map((item) => (
-        <a 
-          href={item.href} 
-          class={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 
-            ${currentPath === item.href 
-              ? 'bg-emerald-500/10 text-emerald-400' 
+        <a
+          href={item.href}
+          class={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200
+            ${currentPath === item.href
+              ? 'bg-emerald-500/10 text-emerald-400'
               : 'text-gray-400 hover:text-emerald-300 hover:bg-emerald-500/5'}`}
-        >
-          <item.icon className="h-4 w-4" />
-          {item.label}
-        </a>
-      ))}
-    </div>
-
-    {/* Right Section */}
-    <div class="flex items-center gap-2 sm:gap-3">
-        {/* Mobile Menu Button */}
-        <button id="mobile-menu-btn" class="md:hidden p-2 text-gray-400 hover:text-white transition-colors">
-            <Menu className="h-5 w-5" id="menu-icon" />
-        </button>
-    </div>
-  </div>
-  
-  {/* Mobile Menu - Hidden by default */}
-  <div id="mobile-menu" class="hidden md:hidden border-t border-[#1e3327] bg-[#111c16]">
-    <div class="px-4 py-3 space-y-1">
-      {navItems.map((item) => (
-        <a 
-          href={item.href} 
-          class={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors 
-            ${currentPath === item.href 
-              ? 'bg-[#1e3327] text-emerald-400' 
-              : 'text-gray-400 hover:bg-[#162119] hover:text-white'}`}
         >
           <item.icon className="h-4 w-4" />
           {item.label}
@@ -65,11 +40,20 @@ const currentPath = Astro.url.pathname;
   </div>
 </nav>
 
-<script>
-  const menuBtn = document.getElementById('mobile-menu-btn');
-  const mobileMenu = document.getElementById('mobile-menu');
-  
-  menuBtn?.addEventListener('click', () => {
-    mobileMenu?.classList.toggle('hidden');
-  });
-</script>
+{/* Mobile Bottom Tab Bar */}
+<nav class="fixed bottom-0 left-0 right-0 z-50 md:hidden border-t border-[#1e3327] bg-[#0d1a12]">
+  <div class="flex items-center justify-around h-16 px-2">
+    {navItems.map((item) => (
+      <a
+        href={item.href}
+        class={`flex flex-col items-center justify-center gap-1 flex-1 py-2 transition-colors
+          ${currentPath === item.href
+            ? 'text-emerald-400'
+            : 'text-gray-500 hover:text-gray-300'}`}
+      >
+        <item.icon className="h-5 w-5" />
+        <span class="text-[10px] font-medium">{item.label}</span>
+      </a>
+    ))}
+  </div>
+</nav>

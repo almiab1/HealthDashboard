@@ -124,7 +124,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   };
 
   return (
-    <div className="rounded-xl bg-[#111c16] border border-[#1e3327] p-3 overflow-hidden flex flex-col h-full">
+    <div className="rounded-xl bg-[#111c16] border border-[#1e3327] p-3 overflow-hidden flex flex-col h-full border-l-2" style={{ borderLeftColor: color }}>
       {/* Header + Value Row */}
       <div className="flex items-center justify-between mb-1">
         <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">{title}</p>

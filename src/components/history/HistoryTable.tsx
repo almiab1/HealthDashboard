@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import type { RegistroCorporal } from '../../utils/data';
 import { RegisterForm } from '../register/RegisterForm';
-import { Trash2, Edit, X, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Plus, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download } from 'lucide-react';
+import { Trash2, Edit, X, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Plus, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { deleteRecord } from '../../lib/database';
 import { DownloadButton } from '../ui/DownloadButton';
+import { EmptyState } from '../ui/EmptyState';
 
 interface HistoryTableProps {
   initialData: RegistroCorporal[];
@@ -459,9 +460,11 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({ initialData }) => {
           </div>
         )})}
         {paginatedData.length === 0 && (
-          <div className="text-center py-8 bg-[#111c16] border border-[#1e3327] rounded-xl">
-            <p className="text-sm text-gray-500">No hay registros que coincidan con los filtros.</p>
-          </div>
+          <EmptyState
+            icon={<Search className="h-7 w-7 text-emerald-400" />}
+            title="Sin resultados"
+            description="No hay registros que coincidan con los filtros seleccionados. Prueba con un rango de fechas diferente."
+          />
         )}
         
         {/* Mobile Pagination */}
@@ -579,8 +582,12 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({ initialData }) => {
               })}
               {paginatedData.length === 0 && (
                  <tr>
-                   <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
-                     No hay registros que coincidan con los filtros.
+                   <td colSpan={10} className="px-4 py-12">
+                     <EmptyState
+                       icon={<Search className="h-7 w-7 text-emerald-400" />}
+                       title="Sin resultados"
+                       description="No hay registros que coincidan con los filtros seleccionados. Prueba con un rango de fechas diferente."
+                     />
                    </td>
                  </tr>
               )}

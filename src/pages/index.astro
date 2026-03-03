@@ -7,6 +7,7 @@ import { getProcessedData, getLastRecordWithDelta } from '@/utils/dataProcessor'
 import { DashboardDesktop } from '@/components/dashboard/DashboardDesktop';
 import { getSettingValue } from '@/utils/settings';
 import { Plus } from 'lucide-react';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export const prerender = false;
 
@@ -31,79 +32,90 @@ const previousRecord = (hasData && data.length > 1) ? data[data.length - 2] : nu
   {isTauriBuild ? (
     <DashboardDesktop client:only="react" />
   ) : (
-  <div class="space-y-6 lg:space-y-8">
-    {/* Header Section - Stacked on mobile, row on larger screens */}
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+  <div class="flex flex-col h-[calc(100vh-110px)] overflow-hidden">
+    {/* Header Section */}
+    <div class="flex-shrink-0 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between mb-3">
         <div>
             <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white">Hola, {userName}</h1>
-            <p class="text-gray-500 mt-1 text-sm sm:text-base">Aquí puedes ver tu progreso semanal.</p>
+            <p class="text-gray-500 mt-0.5 text-sm">Aquí puedes ver tu progreso semanal.</p>
         </div>
-        <a href="/register" class="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-2.5 px-5 rounded-lg flex items-center justify-center transition-colors shadow-lg shadow-emerald-500/20">
-            <Plus className="mr-2 h-5 w-5" />
+        <a href="/register" class="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-2 px-4 rounded-lg flex items-center justify-center transition-colors shadow-lg shadow-emerald-500/20 text-sm">
+            <Plus className="mr-2 h-4 w-4" />
             Registrar Nuevas Medidas
         </a>
     </div>
 
     {/* Section Title & Filters */}
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 lg:mb-5">
-        <h2 class="text-sm sm:text-base font-semibold text-white">Progreso a lo Largo del Tiempo</h2>
+    <div class="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+        <h2 class="text-sm font-semibold text-white">Progreso a lo Largo del Tiempo</h2>
         <DateFilter client:load />
     </div>
 
-    {/* Metrics Grid - 1 column mobile, 2 tablet, 3 desktop */}
-    <div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
+    {/* Main Content - Two Column Layout: Charts LEFT (wide), Table RIGHT (narrow) */}
+    <div class="flex-1 min-h-0 flex flex-col md:flex-row gap-3">
+        {/* Left Column: Metrics with Charts - Takes most space */}
+        <div class="flex-1 flex flex-col gap-2 order-2 md:order-1">
             {hasData ? (
-            <>
-                <MetricCard 
-                    client:load
-                    title="Peso (kg)" 
-                    value={lastRecord.Peso} 
-                    unit="kg" 
-                    delta={delta?.Peso} 
-                    inverseTrend={true}
-                    data={data}
-                    dataKey="Peso"
-                    color="#4ade80"
-                />
-                <MetricCard 
-                    client:load
-                    title="Porcentaje de Grasa (%)" 
-                    value={lastRecord.GrasaPorc} 
-                    unit="%" 
-                    delta={delta?.GrasaPorc} 
-                    inverseTrend={true}
-                    data={data}
-                    dataKey="GrasaPorc"
-                    color="#d97706"
-                />
-                <MetricCard 
-                    client:load
-                    title="Masa Muscular (kg)" 
-                    value={lastRecord.MusculoKg} 
-                    unit="kg" 
-                    delta={delta?.MusculoKg} 
-                    inverseTrend={false}
-                    data={data}
-                    dataKey="MusculoKg"
-                    color="#38bdf8"
-                />
-            </>
-            ) : (
-                <div class="col-span-full text-center py-10 text-gray-500">
-                    No hay registros disponibles. Empieza registrando una nueva medida.
+            <Fragment>
+                <div class="flex-1 min-h-[100px]">
+                    <MetricCard
+                        client:load
+                        title="Peso (kg)"
+                        value={lastRecord.Peso}
+                        unit="kg"
+                        delta={delta?.Peso}
+                        inverseTrend={true}
+                        data={data}
+                        dataKey="Peso"
+                        color="#4ade80"
+                    />
                 </div>
+                <div class="flex-1 min-h-[100px]">
+                    <MetricCard
+                        client:load
+                        title="Porcentaje de Grasa (%)"
+                        value={lastRecord.GrasaPorc}
+                        unit="%"
+                        delta={delta?.GrasaPorc}
+                        inverseTrend={true}
+                        data={data}
+                        dataKey="GrasaPorc"
+                        color="#d97706"
+                    />
+                </div>
+                <div class="flex-1 min-h-[100px]">
+                    <MetricCard
+                        client:load
+                        title="Masa Muscular (kg)"
+                        value={lastRecord.MusculoKg}
+                        unit="kg"
+                        delta={delta?.MusculoKg}
+                        inverseTrend={false}
+                        data={data}
+                        dataKey="MusculoKg"
+                        color="#38bdf8"
+                    />
+                </div>
+            </Fragment>
+            ) : (
+                <EmptyState
+                    client:load
+                    iconName="chart"
+                    title="Sin registros todavia"
+                    description="Registra tu primera medicion corporal para comenzar a ver tu progreso aqui."
+                    ctaLabel="Registrar Nuevas Medidas"
+                    ctaHref="/register"
+                />
             )}
         </div>
-    </div>
 
-    {/* Recent History Table */}
-    {hasData && (
-    <div>
-        <h2 class="text-sm sm:text-base font-semibold text-white mb-4 lg:mb-5">Último Registro</h2>
-        <RecentTable lastRecord={lastRecord} previousRecord={previousRecord} />
+        {/* Right Column: Recent History Table - ~33% width */}
+        {hasData && (
+        <div class="w-full md:w-[33%] flex-shrink-0 order-1 md:order-2">
+            <RecentTable lastRecord={lastRecord} previousRecord={previousRecord} />
+        </div>
+        )}
     </div>
-    )}
   </div>
   )}
 </MainLayout>

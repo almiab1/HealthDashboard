@@ -1,263 +1,138 @@
-# Tauri Migration - Phase 2: Database
+# Tauri Desktop Implementation
 
-## Current State
+## Status: Complete
 
-The application uses:
-- **Database:** MySQL (via `mysql2/promise`)
-- **ORM:** Drizzle ORM with `drizzle-orm/mysql-core`
-- **Affected files:**
-  - `src/db/client.ts` - MySQL connection
-  - `src/db/schema.ts` - Schema with MySQL types
-  - `drizzle.config.ts` - Drizzle Kit configuration
+The desktop version is fully implemented using Tauri 2 with a Rust backend and embedded SQLite database.
 
-## Objective
+## Architecture
 
-For the offline desktop version, we need to replace MySQL with **SQLite**, which:
-- Embeds within the executable (no external server)
-- Data is saved in a local file (e.g., `~/.healthdashboard/data.db`)
-- Works 100% without internet connection
+The desktop app reuses the Astro + React frontend as a static build, with a Rust backend handling all data operations via Tauri IPC.
 
----
+```
+┌──────────────────────────────────────┐
+│          Tauri Window (WebView)       │
+│  ┌─────────────────────────────────┐ │
+│  │  Static Astro + React Frontend  │ │
+│  │  (dist-desktop/)                │ │
+│  │                                 │ │
+│  │  database.ts → invoke()  ───────┼─┼──→ Tauri IPC
+│  └─────────────────────────────────┘ │      │
+│                                      │      ▼
+│  ┌─────────────────────────────────┐ │  lib.rs (Rust)
+│  │  Rust Backend                   │ │    │
+│  │  - SQLite via rusqlite          │ │    ▼
+│  │  - CRUD commands                │ │  data.db (SQLite)
+│  │  - File I/O (CSV export)        │ │
+│  └─────────────────────────────────┘ │
+└──────────────────────────────────────┘
+```
 
-## Migration Tasks
+## Rust Backend (`src-tauri/src/lib.rs`)
 
-### 1. Install SQLite Dependencies
+### Database Initialization
 
+On first launch, `init_database()`:
+1. Resolves the user data directory via `dirs::data_dir()`
+2. Creates `healthdashboard/` subdirectory if needed
+3. Opens/creates `data.db` SQLite file
+4. Creates `body_metrics` and `app_settings` tables if they don't exist
+
+### Tauri Commands
+
+All commands receive `State<DbConnection>` (a `Mutex<Connection>` for thread-safe SQLite access):
+
+| Command | Signature | Description |
+|---------|-----------|-------------|
+| `get_all_records` | `() → Vec<BodyMetric>` | All records ordered by date ASC |
+| `create_record` | `(data: BodyMetric) → i64` | Insert, returns row ID |
+| `update_record` | `(id: i64, data: BodyMetric) → ()` | Update by ID |
+| `delete_record` | `(id: i64) → ()` | Delete by ID |
+| `get_record_by_id` | `(id: i64) → Option<BodyMetric>` | Single record lookup |
+| `save_csv_file` | `(content: String, filename: String) → String` | Write file to disk |
+| `get_setting` | `(key: String) → Option<String>` | Get config value |
+| `set_setting` | `(key: String, value: String) → ()` | Upsert config (INSERT ... ON CONFLICT) |
+| `get_all_settings` | `() → Vec<AppSetting>` | All settings |
+
+### Plugins
+
+- `tauri-plugin-dialog` — Native file save/open dialogs (used for CSV export)
+- `tauri-plugin-log` — Console logging (debug builds only)
+
+### Rust Dependencies (`Cargo.toml`)
+
+```toml
+tauri = "2.10"
+rusqlite = { version = "0.32", features = ["bundled"] }  # Bundled SQLite
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+dirs = "5.0"
+log = "0.4"
+tauri-plugin-dialog = "2"
+tauri-plugin-log = "2"
+```
+
+## Frontend Integration
+
+### Runtime Detection
+
+`src/lib/database.ts` detects Tauri by checking for injected globals:
+
+```typescript
+function isTauri(): boolean {
+  return Boolean(window.__TAURI__ || window.__TAURI_INTERNALS__);
+}
+```
+
+### Dynamic Import
+
+The Tauri API is dynamically imported only when needed (avoids bundling issues in web mode):
+
+```typescript
+async function tryInvokeTauri<T>(command: string, payload: Record<string, unknown>): Promise<T> {
+  const { invoke } = await import('@tauri-apps/api/core');
+  return invoke<T>(command, payload);
+}
+```
+
+### Desktop-Specific Components
+
+Desktop pages in `src/pages-desktop/` use `client:only="react"` components that load data entirely client-side:
+
+- `DashboardDesktop` — Fetches records via `getAllRecords()`, renders MetricCards + table
+- `HistoryDesktop` — Fetches records, renders editable table with sort/filter/delete
+- `SettingsDesktop` — Loads settings via `getSetting()`, shows profile form + stats + CSV export
+
+## MySQL vs SQLite Differences
+
+| Aspect | MySQL (Web) | SQLite (Desktop) |
+|--------|-------------|------------------|
+| Date storage | Native `DATE` type | `TEXT` (ISO 8601 string) |
+| Decimal types | `DECIMAL(p,s)` | `REAL` (64-bit float) |
+| Integer types | `INT`, `TINYINT` | `INTEGER` |
+| Timestamps | `TIMESTAMP DEFAULT NOW()` | `TEXT DEFAULT CURRENT_TIMESTAMP` |
+| Upsert | Check + INSERT/UPDATE | `INSERT ... ON CONFLICT DO UPDATE` |
+| Connection | Pool (mysql2) | Single file (Mutex-wrapped) |
+| Migrations | Drizzle Kit | Auto-create on startup |
+
+## System Requirements
+
+### Linux (Ubuntu/Debian)
 ```bash
-npm install better-sqlite3
-npm install -D @types/better-sqlite3
-```
-
-### 2. Create Parallel SQLite Schema
-
-Create file `src/db/schema.desktop.ts`:
-
-```typescript
-import { sqliteTable, integer, real, text } from 'drizzle-orm/sqlite-core';
-
-export const bodyMetrics = sqliteTable('body_metrics', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  userId: integer('user_id').default(1),
-  recordedAt: text('recorded_at').notNull(), // SQLite has no native DATE type
-  
-  // Main Metrics (real = FLOAT in SQLite)
-  weight: real('weight').notNull(),
-  bmi: real('bmi'),
-  fatMassKg: real('fat_mass_kg'),
-  fatMassPercent: real('fat_mass_percent'),
-  muscleMassKg: real('muscle_mass_kg'),
-  freeMassKg: real('free_mass_kg'),
-  
-  // Composition Metrics
-  waterKg: real('water_kg'),
-  waterPercent: real('water_percent'),
-  boneMassKg: real('bone_mass_kg'),
-  visceralFat: real('visceral_fat'),
-  
-  // Metabolism
-  bmr: real('bmr'),
-  metabolicAge: integer('metabolic_age'),
-  
-  // Bioimpedance (Advanced)
-  phaseAngle: real('phase_angle'),
-  resistance: real('resistance'),
-  reactance: real('reactance'),
-  
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP')
-});
-```
-
-### 3. Create SQLite Client for Desktop
-
-Create file `src/db/client.desktop.ts`:
-
-```typescript
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
-import * as schema from './schema.desktop';
-import { join } from 'path';
-import { homedir } from 'os';
-import { mkdirSync, existsSync } from 'fs';
-
-// Determine database path
-const dataDir = join(homedir(), '.healthdashboard');
-if (!existsSync(dataDir)) {
-  mkdirSync(dataDir, { recursive: true });
-}
-
-const dbPath = join(dataDir, 'data.db');
-const sqlite = new Database(dbPath);
-
-export const db = drizzle(sqlite, { schema });
-
-// Create table if it doesn't exist (first run)
-sqlite.exec(`
-  CREATE TABLE IF NOT EXISTS body_metrics (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER DEFAULT 1,
-    recorded_at TEXT NOT NULL,
-    weight REAL NOT NULL,
-    bmi REAL,
-    fat_mass_kg REAL,
-    fat_mass_percent REAL,
-    muscle_mass_kg REAL,
-    free_mass_kg REAL,
-    water_kg REAL,
-    water_percent REAL,
-    bone_mass_kg REAL,
-    visceral_fat REAL,
-    bmr REAL,
-    metabolic_age INTEGER,
-    phase_angle REAL,
-    resistance REAL,
-    reactance REAL,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-  )
-`);
-```
-
-### 4. Create drizzle.config.desktop.ts
-
-```typescript
-import { defineConfig } from "drizzle-kit";
-
-export default defineConfig({
-  schema: "./src/db/schema.desktop.ts",
-  out: "./drizzle-desktop",
-  dialect: "sqlite",
-  dbCredentials: {
-    url: "./data.db", // For local migrations
-  },
-});
-```
-
-### 5. Move API Logic to Client (React)
-
-**Problem:** Files in `src/pages/api/` only work with a Node.js server.
-
-**Solution:** Create a data module that works directly in the frontend.
-
-Create `src/lib/database.desktop.ts`:
-
-```typescript
-// This file is only used in the desktop version
-// Uses Tauri to access the file system
-
-import { invoke } from '@tauri-apps/api/core';
-
-export interface BodyMetric {
-  id: number;
-  recordedAt: string;
-  weight: number;
-  bmi: number | null;
-  // ... rest of fields
-}
-
-// Calls to Tauri Rust commands
-export async function getAllRecords(): Promise<BodyMetric[]> {
-  return await invoke('get_all_records');
-}
-
-export async function createRecord(data: Omit<BodyMetric, 'id'>): Promise<void> {
-  await invoke('create_record', { data });
-}
-
-export async function deleteRecord(id: number): Promise<void> {
-  await invoke('delete_record', { id });
-}
-
-export async function updateRecord(id: number, data: Partial<BodyMetric>): Promise<void> {
-  await invoke('update_record', { id, data });
-}
-```
-
-### 6. Implement Tauri Commands (Rust)
-
-In `src-tauri/src/main.rs`, add commands for SQLite:
-
-```rust
-use rusqlite::{Connection, params};
-use tauri::State;
-use std::sync::Mutex;
-
-struct DbConnection(Mutex<Connection>);
-
-#[tauri::command]
-fn get_all_records(db: State<DbConnection>) -> Result<Vec<BodyMetric>, String> {
-    let conn = db.0.lock().map_err(|e| e.to_string())?;
-    // ... implement query
-}
-
-#[tauri::command]
-fn create_record(db: State<DbConnection>, data: BodyMetric) -> Result<(), String> {
-    let conn = db.0.lock().map_err(|e| e.to_string())?;
-    // ... implement insert
-}
-
-// ... more commands
-```
-
----
-
-## Key Differences MySQL vs SQLite
-
-| Aspect | MySQL | SQLite |
-|---------|-------|--------|
-| `DECIMAL` Type | `decimal(5,2)` | `real` (FLOAT) |
-| `DATE` Type | Native | `text` (ISO string) |
-| `TIMESTAMP` Type | Native | `text` |
-| `TINYINT` Type | Native | `integer` |
-| Auto-increment | `autoincrement()` | `autoIncrement: true` |
-| Connection | Connection pool | Single file |
-
----
-
-## Conditional Imports Strategy
-
-To maintain both versions, use dynamic imports:
-
-```typescript
-// src/lib/getDatabase.ts
-export async function getDatabase() {
-  if (import.meta.env.TAURI) {
-    // Desktop version - uses Tauri commands
-    return await import('./database.desktop');
-  } else {
-    // Web version - uses API routes
-    return await import('./database.web');
-  }
-}
-```
-
----
-
-## Next Steps
-
-1. [ ] Install `better-sqlite3` and types
-2. [ ] Create `schema.desktop.ts` and `client.desktop.ts`
-3. [ ] Implement Tauri commands in Rust
-4. [ ] Create database wrapper for frontend
-5. [ ] Test with `npm run tauri dev`
-6. [ ] Implement data migration (export MySQL → import SQLite)
-
----
-
-## System Requirements for Development
-
-To compile the desktop app you need:
-
-### Windows
-- [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-- [Rust](https://rustup.rs/)
-
-### macOS
-- Xcode Command Line Tools: `xcode-select --install`
-- [Rust](https://rustup.rs/)
-
-### Linux (Debian/Ubuntu)
-```bash
-sudo apt update
-sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file \
-  libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+sudo apt-get install -y \
+  libwebkit2gtk-4.1-dev \
+  libappindicator3-dev \
+  librsvg2-dev \
+  patchelf \
+  build-essential
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
+
+### macOS
+```bash
+xcode-select --install
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+### Windows
+- [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (C++ workload)
+- [Rust](https://rustup.rs/)

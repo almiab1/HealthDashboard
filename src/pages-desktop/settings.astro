@@ -1,0 +1,8 @@
+---
+import MainLayout from '@/layouts/MainLayout.astro';
+import { SettingsDesktop } from '@/components/settings/SettingsDesktop';
+---
+
+<MainLayout title="Configuración">
+  <SettingsDesktop client:only="react" />
+</MainLayout>

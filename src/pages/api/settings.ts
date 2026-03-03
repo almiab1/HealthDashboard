@@ -33,9 +33,10 @@ export const GET: APIRoute = async ({ url }) => {
     );
 
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error al obtener configuración:', error);
     return new Response(
-      JSON.stringify({ error: 'Error al procesar la solicitud' }),
+      JSON.stringify({ error: `Error al obtener configuración: ${message}` }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
@@ -76,9 +77,10 @@ export const PUT: APIRoute = async ({ request }) => {
     );
 
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error al guardar configuración:', error);
     return new Response(
-      JSON.stringify({ error: 'Error al procesar la solicitud' }),
+      JSON.stringify({ error: `Error al guardar configuración: ${message}` }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }

@@ -175,15 +175,13 @@ export async function createRecord(data: RecordInput): Promise<{ success: boolea
  * Actualizar un registro existente
  */
 export async function updateRecord(id: number, data: RecordInput): Promise<{ success: boolean; error?: string }> {
-  if (typeof window !== 'undefined') {
+  if (isTauri()) {
     try {
       const metric = inputToTauriMetric(data);
       await tryInvokeTauri('update_record', { id, data: metric });
       return { success: true };
     } catch (error) {
-      if (isTauri()) {
-        return { success: false, error: String(error) };
-      }
+      return { success: false, error: String(error) };
     }
   }
   try {
@@ -206,14 +204,12 @@ export async function updateRecord(id: number, data: RecordInput): Promise<{ suc
  * Eliminar un registro
  */
 export async function deleteRecord(id: number): Promise<{ success: boolean; error?: string }> {
-  if (typeof window !== 'undefined') {
+  if (isTauri()) {
     try {
       await tryInvokeTauri('delete_record', { id });
       return { success: true };
     } catch (error) {
-      if (isTauri()) {
-        return { success: false, error: String(error) };
-      }
+      return { success: false, error: String(error) };
     }
   }
   try {
@@ -252,6 +248,76 @@ export async function getAllRecords(): Promise<RegistroCorporal[]> {
   
   // En web, esto normalmente se hace con SSR en las páginas Astro
   console.warn('[DB] getAllRecords() en modo web - devolviendo []');
+  return [];
+}
+
+/**
+ * Obtener un valor de configuración por clave
+ */
+export async function getSetting(key: string): Promise<string | null> {
+  if (isTauri()) {
+    try {
+      const value = await tryInvokeTauri<string | null>('get_setting', { key });
+      return value;
+    } catch (error) {
+      console.error('[DB] Error getting setting from Tauri:', error);
+      return null;
+    }
+  }
+
+  try {
+    const response = await fetch(`/api/settings?key=${encodeURIComponent(key)}`);
+    const data = await response.json();
+    return data.value ?? null;
+  } catch (error) {
+    console.error('[DB] Error getting setting from API:', error);
+    return null;
+  }
+}
+
+/**
+ * Guardar un valor de configuración
+ */
+export async function setSetting(key: string, value: string): Promise<{ success: boolean; error?: string }> {
+  if (isTauri()) {
+    try {
+      await tryInvokeTauri('set_setting', { key, value });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  }
+
+  try {
+    const response = await fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value })
+    });
+    if (response.ok) {
+      return { success: true };
+    }
+    const result = await response.json();
+    return { success: false, error: result.error || 'Error al guardar configuración' };
+  } catch (error) {
+    return { success: false, error: 'Error de conexión con el servidor' };
+  }
+}
+
+/**
+ * Obtener todas las configuraciones
+ */
+export async function getAllSettings(): Promise<Array<{ key: string; value: string }>> {
+  if (isTauri()) {
+    try {
+      return await tryInvokeTauri<Array<{ key: string; value: string }>>('get_all_settings', {});
+    } catch (error) {
+      console.error('[DB] Error getting all settings from Tauri:', error);
+      return [];
+    }
+  }
+
+  // Web mode doesn't have a get-all endpoint, return empty
   return [];
 }
 

@@ -53,7 +53,7 @@ export const DateFilter: React.FC = () => {
 
   return (
     <div className="flex flex-col sm:flex-row gap-2 sm:items-center relative">
-      <div className="flex bg-[#111c16] border border-[#1e3327] rounded-lg p-1 gap-1">
+      <div className="flex bg-[#111c16] border border-[#1e3327] rounded-lg p-1 gap-1 overflow-x-auto scrollbar-hide">
         {ranges.map((r) => (
           <button
             key={r.value}
@@ -64,7 +64,12 @@ export const DateFilter: React.FC = () => {
                 : 'text-gray-400 hover:text-gray-200 hover:bg-[#162119]'
             }`}
           >
-            {r.label}
+            {r.value === 'custom' ? (
+              <>
+                <span className="hidden sm:inline">{r.label}</span>
+                <Calendar className="sm:hidden h-3.5 w-3.5" />
+              </>
+            ) : r.label}
           </button>
         ))}
       </div>
