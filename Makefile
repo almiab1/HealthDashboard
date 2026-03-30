@@ -54,6 +54,9 @@ db-migrate: ## Apply database migrations
 db-studio: ## Open Drizzle Studio
 	pnpm db:studio
 
+db-sync: ## Sync SQLite (desktop/Tauri) → MySQL (web), Tauri is source of truth
+	pnpm db:sync-from-desktop
+
 # Utilities
 .PHONY: install preview clean help
 
